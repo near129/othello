@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 use std::{fmt, vec};
 
-const SIZE: usize = 8;
+pub const SIZE: usize = 8;
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Stone {
     Whilte,
@@ -37,27 +37,6 @@ const D: [(i64, i64); 8] = [
     (1, 1),
 ];
 
-pub struct Square {
-    pub x: usize,
-    pub y: usize,
-}
-impl Square {
-    pub fn parse(input: String) -> Result<Square, String> {
-        let input: Vec<_> = input.chars().collect();
-        let is_valid = input.len() == 2 && {
-            let x = input[0];
-            let y = input[1];
-            (x.is_alphabetic() && x as u8 - b'a' < SIZE as u8)
-                && (y.is_numeric() && y as u8 - b'0' < SIZE as u8)
-        };
-        if !is_valid {
-            return Err("Invalid input. Input must be [a-h][0-7]".to_string());
-        }
-        let x = (input[0] as u8 - b'a') as usize;
-        let y = (input[1] as u8 - b'0') as usize;
-        Ok(Square { x, y })
-    }
-}
 fn add_coord_and_direction(x: usize, y: usize, dx: i64, dy: i64) -> Result<(usize, usize), String> {
     let a = x as i64 + dx;
     let b = y as i64 + dy;
