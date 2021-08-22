@@ -16,10 +16,15 @@ impl Stone {
         }
     }
 }
+impl Default for Stone {
+    fn default() -> Self {
+        Stone::Black
+    }
+}
 #[derive(Default)]
 pub struct StoneCount {
     black: usize,
-    white: usize
+    white: usize,
 }
 const D: [(i64, i64); 8] = [
     (-1, -1),
@@ -60,6 +65,12 @@ fn add_coord_and_direction(x: usize, y: usize, dx: i64, dy: i64) -> Result<(usiz
         return Err("Out of range".to_string());
     }
     Ok((a as usize, b as usize))
+}
+fn check_coord(x: usize, y: usize) -> Result<(), String> {
+    if !(x < SIZE && y < SIZE) {
+        return Err("Out of range".to_string());
+    }
+    Ok(())
 }
 pub struct Board([[Option<Stone>; SIZE]; SIZE]);
 
@@ -127,6 +138,7 @@ impl Board {
         available_squares
     }
     pub fn put(&mut self, stone: Stone, x: usize, y: usize) -> Result<(), String> {
+        check_coord(x, y)?;
         let mut reverse_stones = vec![];
         for &(dx, dy) in &D {
             let mut tmp_reverse_stones = vec![];
