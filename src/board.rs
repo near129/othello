@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 use std::{fmt, vec};
 
-const SIZE: usize = 8;
+pub const SIZE: usize = 8;
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Stone {
     Whilte,
@@ -16,6 +16,16 @@ impl Stone {
         }
     }
 }
+impl Default for Stone {
+    fn default() -> Self {
+        Stone::Black
+    }
+}
+#[derive(Default)]
+pub struct StoneCount {
+    black: usize,
+    white: usize,
+}
 const D: [(i64, i64); 8] = [
     (-1, -1),
     (-1, 0),
@@ -27,30 +37,6 @@ const D: [(i64, i64); 8] = [
     (1, 1),
 ];
 
-pub struct Square {
-    pub x: usize,
-    pub y: usize,
-}
-impl Square {
-    fn new(x: usize, y: usize) -> Square {
-        Square { x, y }
-    }
-    pub fn parse(input: String) -> Result<Square, String> {
-        let input: Vec<_> = input.chars().collect();
-        let is_valid = input.len() == 2 && {
-            let x = input[0];
-            let y = input[1];
-            (x.is_alphabetic() && x as u8 - b'a' < SIZE as u8)
-                && (y.is_numeric() && y as u8 - b'0' < SIZE as u8)
-        };
-        if !is_valid {
-            return Err("Invalid input. Input must be [a-h][0-7]".to_string());
-        }
-        let x = (input[0] as u8 - b'a') as usize;
-        let y = (input[1] as u8 - b'0') as usize;
-        Ok(Square { x, y })
-    }
-}
 fn add_coord_and_direction(x: usize, y: usize, dx: i64, dy: i64) -> Result<(usize, usize), String> {
     let a = x as i64 + dx;
     let b = y as i64 + dy;
@@ -58,6 +44,12 @@ fn add_coord_and_direction(x: usize, y: usize, dx: i64, dy: i64) -> Result<(usiz
         return Err("Out of range".to_string());
     }
     Ok((a as usize, b as usize))
+}
+fn check_coord(x: usize, y: usize) -> Result<(), String> {
+    if !(x < SIZE && y < SIZE) {
+        return Err("Out of range".to_string());
+    }
+    Ok(())
 }
 pub struct Board([[Option<Stone>; SIZE]; SIZE]);
 
@@ -82,7 +74,6 @@ impl fmt::Display for Board {
     }
 }
 impl Board {
-    #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         let mut b = [[None; SIZE]; SIZE];
         b[3][3] = Some(Stone::Whilte);
@@ -126,6 +117,7 @@ impl Board {
         available_squares
     }
     pub fn put(&mut self, stone: Stone, x: usize, y: usize) -> Result<(), String> {
+        check_coord(x, y)?;
         let mut reverse_stones = vec![];
         for &(dx, dy) in &D {
             let mut tmp_reverse_stones = vec![];
@@ -162,20 +154,11 @@ impl Board {
             Ok(())
         }
     }
-}
-
-#[derive(Default)]
-pub struct StoneCounter {
-    black: usize,
-    white: usize
-}
-
-impl StoneCounter {
-    pub fn count(board: &Board) -> StoneCounter {
-        let mut counter = StoneCounter::default();
+    pub fn count_stone(&self) -> StoneCount {
+        let mut counter = StoneCount::default();
         for i in 0..SIZE {
             for j in 0..SIZE {
-                match board.0[i][j] {
+                match self.0[i][j] {
                     Some(Stone::Black) => counter.black += 1,
                     Some(Stone::Whilte) => counter.white += 1,
                     None => {}
@@ -183,5 +166,11 @@ impl StoneCounter {
             }
         }
         counter
+    }
+}
+
+impl Default for Board {
+    fn default() -> Self {
+        Self::new()
     }
 }

@@ -1,75 +1,50 @@
-use crate::board::{Board, Stone, StoneCounter};
+use std::mem::swap;
+
+use crate::board::{Board, Stone, StoneCount};
 
 #[derive(Debug)]
-pub struct PutStoneResult {
+pub struct TurnEndResult {
     put: Result<(), String>,
     finish: bool,
     pass: bool,
 }
 
+#[derive(Default)]
 pub struct Game {
-    board: Board,
-    turn: Stone,
-    finish: bool,
+    pub board: Board,
+    pub turn: Stone,
+    pub turn_count: usize,
+    pub finished: bool,
 }
 
 impl Game {
-    #[allow(clippy::new_without_default)]
-    pub fn new() -> Game {
-        Game {
-            board: Board::new(),
-            turn: Stone::Black,
-            finish: false,
+    pub fn count_stone(&self) -> StoneCount {
+        self.board.count_stone()
+    }
+    pub fn get_available_squares(&self) -> Result<Vec<(usize, usize)>, String> {
+        if self.finished {
+            return Err("The game is alredy over.".to_string());
         }
+        Ok(self.board.get_available_squares(self.turn))
     }
-    pub fn turn(&self) -> &Stone {
-        &self.turn
-    }
-    pub fn finish(&self) -> bool {
-        self.finish
-    }
-    pub fn board(&self) -> &Board {
-        &self.board
-    }
-    pub fn count_stone(&self) -> StoneCounter {
-        StoneCounter::count(&self.board)
-    }
-    pub fn get_available_squares(&self) -> Vec<(usize, usize)> {
-        self.board.get_available_squares(self.turn)
-    }
-    pub fn put_stone(&mut self, x: usize, y: usize) -> PutStoneResult {
-    // pub fn put_stone(&mut self, stone: Stone x: usize, y: usize) -> PutStoneResult {
-    // 明示的に自分のターンを指定させる
-        if self.finish {
-            return PutStoneResult {
-                put: Err("Alredy game finished!".to_string()),
-                finish: true,
-                pass: false,
-            };
+    pub fn put(&mut self, x: usize, y: usize) -> Result<(), String> {
+        if self.finished {
+            return Err("The game is alredy over.".to_string());
         }
-        if let Err(message) = self.board.put(self.turn, x, y) {
-            return PutStoneResult {
-                put: Err(message),
-                finish: self.finish,
-                pass: false,
-            };
-        }
-        self.finish = self.is_finish();
-        let pass = self.is_pass();
-        if !(self.finish || pass) {
+        let _ = self.board.put(self.turn, x, y)?;
+        self.finished = self.finish();
+        if !self.pass() {
             self.turn = self.turn.reverse();
         }
-        PutStoneResult {
-            put: Ok(()),
-            finish: self.finish,
-            pass,
-        }
+        Ok(())
     }
-    fn is_finish(&self) -> bool {
+    fn finish(&self) -> bool {
         self.board.get_available_squares(Stone::Black).is_empty()
             && self.board.get_available_squares(Stone::Whilte).is_empty()
     }
-    fn is_pass(&self) -> bool {
-        self.board.get_available_squares(self.turn.reverse()).is_empty()
+    fn pass(&self) -> bool {
+        self.board
+            .get_available_squares(self.turn.reverse())
+            .is_empty()
     }
 }
