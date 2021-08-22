@@ -1,5 +1,5 @@
 use crate::board::SIZE;
-pub fn input_parse(input: String) -> Result<(usize, usize), String> {
+pub fn input_parse(input: &str) -> Result<(usize, usize), String> {
     let input: Vec<_> = input.chars().collect();
     let is_valid = input.len() == 2 && {
         let x = input[0];
