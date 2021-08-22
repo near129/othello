@@ -16,6 +16,11 @@ impl Stone {
         }
     }
 }
+#[derive(Default)]
+pub struct StoneCount {
+    black: usize,
+    white: usize
+}
 const D: [(i64, i64); 8] = [
     (-1, -1),
     (-1, 0),
@@ -32,9 +37,6 @@ pub struct Square {
     pub y: usize,
 }
 impl Square {
-    fn new(x: usize, y: usize) -> Square {
-        Square { x, y }
-    }
     pub fn parse(input: String) -> Result<Square, String> {
         let input: Vec<_> = input.chars().collect();
         let is_valid = input.len() == 2 && {
@@ -82,7 +84,6 @@ impl fmt::Display for Board {
     }
 }
 impl Board {
-    #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         let mut b = [[None; SIZE]; SIZE];
         b[3][3] = Some(Stone::Whilte);
@@ -162,20 +163,11 @@ impl Board {
             Ok(())
         }
     }
-}
-
-#[derive(Default)]
-pub struct StoneCounter {
-    black: usize,
-    white: usize
-}
-
-impl StoneCounter {
-    pub fn count(board: &Board) -> StoneCounter {
-        let mut counter = StoneCounter::default();
+    pub fn count_stone(&self) -> StoneCount {
+        let mut counter = StoneCount::default();
         for i in 0..SIZE {
             for j in 0..SIZE {
-                match board.0[i][j] {
+                match self.0[i][j] {
                     Some(Stone::Black) => counter.black += 1,
                     Some(Stone::Whilte) => counter.white += 1,
                     None => {}
@@ -183,5 +175,11 @@ impl StoneCounter {
             }
         }
         counter
+    }
+}
+
+impl Default for Board {
+    fn default() -> Self {
+        Self::new()
     }
 }
