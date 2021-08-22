@@ -1,6 +1,5 @@
 use crate::board::{Board, Stone};
-use rand::rngs::SmallRng;
-use rand::Rng;
+use rand::{Rng, SeedableRng, rngs::SmallRng};
 
 pub trait Player {
     fn find_move(&mut self, board: &Board) -> Option<(usize, usize)>;
@@ -9,6 +8,14 @@ pub trait Player {
 pub struct RandomPlayer {
     thred_rng: SmallRng,
     pub stone: Stone,
+}
+impl RandomPlayer {
+    pub fn new(stone: Stone) -> Self {
+        let thred_rng = SmallRng::from_entropy();
+        RandomPlayer {
+            thred_rng, stone
+        }
+    }
 }
 impl Player for RandomPlayer {
     fn find_move(&mut self, board: &Board) -> Option<(usize, usize)> {
