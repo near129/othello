@@ -30,12 +30,12 @@ impl Component for App {
                 if let Err(message) = self.game.put(x, y) {
                     log::error!("{}", message);
                 } else if self.game.turn == Stone::Whilte {
-                    // if let Ok((x, y)) = self.ai.find_move(&self.game.board) {
-                    //     if let Err(message) = self.game.put(x, y) {
-                    //         log::error!("ai error: {}", message);
-                    //     }
+                    if let Ok((x, y)) = self.ai.find_move(&self.game.board) {
+                        if let Err(message) = self.game.put(x, y) {
+                            log::error!("ai error: {}", message);
+                        }
                         
-                    // }
+                    }
                 }
             }
         }
