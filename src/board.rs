@@ -1,4 +1,3 @@
-#![allow(dead_code)]
 use std::{fmt, vec};
 
 pub const SIZE: usize = 8;
@@ -82,6 +81,17 @@ impl Board {
         b[4][3] = Some(Stone::Black);
         Board(b)
     }
+    pub fn init(&mut self) {
+        let mut b = [[None; SIZE]; SIZE];
+        b[3][3] = Some(Stone::Whilte);
+        b[4][4] = Some(Stone::Whilte);
+        b[3][4] = Some(Stone::Black);
+        b[4][3] = Some(Stone::Black);
+        self.0 = b;
+    }
+    pub fn get_board(&self) -> &[[Option<Stone>; SIZE]; SIZE] {
+        &self.0
+    }
     pub fn is_available_square(&self, player: Stone, x: usize, y: usize) -> bool {
         if self.0[y][x].is_some() {
             return false;
@@ -105,12 +115,12 @@ impl Board {
         }
         false
     }
-    pub fn get_available_squares(&self, player: Stone) -> Vec<(usize, usize)> {
-        let mut available_squares = vec![];
+    pub fn get_available_squares(&self, player: Stone) -> [[bool ; SIZE]; SIZE] {
+        let mut available_squares = [[false; SIZE]; SIZE];
         for i in 0..SIZE {
             for j in 0..SIZE {
                 if self.is_available_square(player, i, j) {
-                    available_squares.push((i, j));
+                    available_squares[j][i] = true;
                 }
             }
         }

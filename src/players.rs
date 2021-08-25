@@ -1,8 +1,8 @@
-use crate::board::{Board, Stone};
+use crate::board::{Board, SIZE, Stone};
 use rand::{Rng, SeedableRng, rngs::SmallRng};
 
 pub trait Player {
-    fn find_move(&mut self, board: &Board) -> Option<(usize, usize)>;
+    fn find_move(&mut self, board: &Board) -> Result<(usize, usize), String>;
     fn stone(&self) -> Stone;
 }
 pub struct RandomPlayer {
@@ -18,13 +18,25 @@ impl RandomPlayer {
     }
 }
 impl Player for RandomPlayer {
-    fn find_move(&mut self, board: &Board) -> Option<(usize, usize)> {
+    fn find_move(&mut self, board: &Board) -> Result<(usize, usize), String> {
         let available_squares = board.get_available_squares(self.stone);
-        if available_squares.is_empty() {
-            return None;
+        let n = available_squares.iter().flatten().filter(|b| **b).count();
+        if n == 0 {
+            return Err("Can't put stone".to_string());
         }
-        let idx = self.thred_rng.gen_range(0..available_squares.len());
-        Some(available_squares[idx])
+        let mut idx = self.thred_rng.gen_range(0..n);
+        for i in 0..SIZE {
+            for j in 0..SIZE {
+                if available_squares[j][i] {
+                    if idx == 0 {
+                        return Ok((i, j));
+                    } else {
+                        idx -= 1;
+                    }
+                }
+            }
+        }
+        unreachable!()
     }
     fn stone(&self) -> Stone {
         self.stone

@@ -1,6 +1,4 @@
-use std::mem::swap;
-
-use crate::board::{Board, Stone, StoneCount};
+use crate::board::{Board, SIZE, Stone, StoneCount};
 
 #[derive(Debug)]
 pub struct TurnEndResult {
@@ -21,7 +19,7 @@ impl Game {
     pub fn count_stone(&self) -> StoneCount {
         self.board.count_stone()
     }
-    pub fn get_available_squares(&self) -> Result<Vec<(usize, usize)>, String> {
+    pub fn get_available_squares(&self) -> Result<[[bool ; SIZE]; SIZE], String> {
         if self.finished {
             return Err("The game is alredy over.".to_string());
         }
