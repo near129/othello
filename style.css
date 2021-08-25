@@ -1,3 +1,6 @@
+body {
+  background: rgb(204, 204, 204);
+}
 .othello-game {
   display: flex;
   flex-direction: column;
@@ -136,7 +139,7 @@
   width: 600px;
   height: 600px;
   border: 8px solid;
-  background: var(--boardRim);
+  border-color: #000;
 }
 
 .winnercontainer {
