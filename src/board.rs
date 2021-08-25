@@ -22,8 +22,8 @@ impl Default for Stone {
 }
 #[derive(Default)]
 pub struct StoneCount {
-    black: usize,
-    white: usize,
+    pub black: usize,
+    pub white: usize,
 }
 const D: [(i64, i64); 8] = [
     (-1, -1),
