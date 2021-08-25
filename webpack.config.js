@@ -12,7 +12,7 @@ module.exports = (env, argv) => {
     },
     entry: './bootstrap.js',
     output: {
-      path: distPath,
+      path: path.join(__dirname, './dist'),
       filename: "todomvc.js",
       webassemblyModuleFilename: "todomvc.wasm"
     },

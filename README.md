@@ -29,3 +29,5 @@ yarn run dev
   between WebAssembly and JavaScript.
 * [`wee_alloc`](https://github.com/rustwasm/wee_alloc), an allocator optimized
   for small code size.
+
+https://github.com/blueedgetechno/othello
