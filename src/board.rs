@@ -1,6 +1,9 @@
-use std::{fmt, vec};
+use std::fmt;
+
+use crate::othello_logic::{legal_move, put};
 
 pub const SIZE: usize = 8;
+pub const UPPER_LEFT: u64 = 0x8000000000000000;
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Stone {
     Whilte,
@@ -15,167 +18,160 @@ impl Stone {
         }
     }
 }
-impl Default for Stone {
-    fn default() -> Self {
-        Stone::Black
-    }
-}
-#[derive(Default)]
 pub struct StoneCount {
     pub black: usize,
     pub white: usize,
 }
-const D: [(i64, i64); 8] = [
-    (-1, -1),
-    (-1, 0),
-    (-1, 1),
-    (0, -1),
-    (0, 1),
-    (1, -1),
-    (1, 0),
-    (1, 1),
-];
-
-fn add_coord_and_direction(x: usize, y: usize, dx: i64, dy: i64) -> Result<(usize, usize), String> {
-    let a = x as i64 + dx;
-    let b = y as i64 + dy;
-    if !(0 <= a && a < SIZE as i64 && 0 <= b && b < SIZE as i64) {
-        return Err("Out of range".to_string());
+pub struct Position(pub u64);
+impl Position {
+    pub fn new(x: usize, y: usize) -> Self {
+        Position(UPPER_LEFT >> (x * SIZE + y))
     }
-    Ok((a as usize, b as usize))
 }
-fn check_coord(x: usize, y: usize) -> Result<(), String> {
-    if !(x < SIZE && y < SIZE) {
-        return Err("Out of range".to_string());
+impl From<Position> for (usize, usize) {
+    fn from(p: Position) -> Self {
+        for i in 0..SIZE * SIZE {
+            let pos = UPPER_LEFT >> i;
+            if p.0 & pos != 0 {
+                return (i / SIZE, i % SIZE);
+            }
+        }
+        unreachable!()
     }
-    Ok(())
 }
-pub struct Board([[Option<Stone>; SIZE]; SIZE]);
+pub struct Positions(pub u64);
+impl Positions {
+    pub fn count(&self) -> usize {
+        self.0.count_ones() as usize
+    }
+}
+impl From<Positions> for Vec<(usize, usize)> {
+    fn from(p: Positions) -> Self {
+        let mut ps = vec![];
+        for i in 0..SIZE * SIZE {
+            let pos = UPPER_LEFT >> i;
+            if p.0 & pos != 0 {
+                ps.push((i / SIZE, i % SIZE));
+            }
+        }
+        ps
+    }
+}
+#[derive(Clone, Copy)]
+pub struct Board {
+    pub turn: Stone,
+    pub black: u64,
+    pub white: u64,
+}
+type BoardArray = [[Option<Stone>; SIZE]; SIZE];
 
 const BLACK_STONE_STRING: &str = "⚪️";
 const WHITE_STONE_STRING: &str = "⚫️";
 
 impl fmt::Display for Board {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut lines = vec!["   a b c d e f g h".to_string()];
-        for (i, stone_line) in self.0.iter().enumerate() {
-            let line: String = stone_line
-                .iter()
-                .map(|x| match *x {
-                    Some(Stone::Black) => BLACK_STONE_STRING,
-                    Some(Stone::Whilte) => WHITE_STONE_STRING,
-                    None => "　",
-                })
-                .collect();
-            lines.push(format!(" {}{}", i, line))
+        let mut s = "   a b c d e f g h\n".to_string();
+        for i in 0..SIZE * SIZE {
+            if i % SIZE == 0 {
+                s.push(char::from_digit((i / SIZE) as u32, 10).unwrap());
+            }
+            let pos = UPPER_LEFT >> i;
+            let stone = match (self.black & pos != 0, self.white & pos != 0) {
+                (true, false) => BLACK_STONE_STRING,
+                (false, true) => WHITE_STONE_STRING,
+                (false, false) => "　",
+                _ => unreachable!(),
+            };
+            s.push_str(stone);
+            if i % SIZE == SIZE - 1 {
+                s.push('\n');
+            }
         }
-        write!(f, "{}", lines.join("\n"))
+        write!(f, "{}", s)
+    }
+}
+impl From<Board> for BoardArray {
+    fn from(board: Board) -> Self {
+        let mut board_array = [[None; SIZE]; SIZE];
+        for i in 0..SIZE * SIZE {
+            let pos = UPPER_LEFT >> i;
+            if board.black & pos != 0 {
+                board_array[i / SIZE][i % SIZE] = Some(Stone::Black);
+            } else if board.white & pos != 0 {
+                board_array[i / SIZE][i % SIZE] = Some(Stone::Whilte);
+            }
+        }
+        board_array
     }
 }
 impl Board {
     pub fn new() -> Self {
-        let mut b = [[None; SIZE]; SIZE];
-        b[3][3] = Some(Stone::Whilte);
-        b[4][4] = Some(Stone::Whilte);
-        b[3][4] = Some(Stone::Black);
-        b[4][3] = Some(Stone::Black);
-        Board(b)
+        Board {
+            turn: Stone::Black,
+            black: 0x0000000810000000,
+            white: 0x0000001008000000,
+        }
     }
     pub fn init(&mut self) {
-        let mut b = [[None; SIZE]; SIZE];
-        b[3][3] = Some(Stone::Whilte);
-        b[4][4] = Some(Stone::Whilte);
-        b[3][4] = Some(Stone::Black);
-        b[4][3] = Some(Stone::Black);
-        self.0 = b;
+        self.black = 0x0000000810000000;
+        self.white = 0x0000001008000000;
     }
-    pub fn get_board(&self) -> &[[Option<Stone>; SIZE]; SIZE] {
-        &self.0
-    }
-    pub fn is_available_square(&self, player: Stone, x: usize, y: usize) -> bool {
-        if self.0[y][x].is_some() {
-            return false;
-        }
-        for &(dx, dy) in &D {
-            if let Ok((mut a, mut b)) = add_coord_and_direction(x, y, dx, dy) {
-                if self.0[b][a] != Some(player.reverse()) {
-                    continue;
-                }
-                while let Ok((next_a, next_b)) = add_coord_and_direction(a, b, dx, dy) {
-                    a = next_a;
-                    b = next_b;
-                    if self.0[b][a].is_none() {
-                        break;
-                    }
-                    if self.0[b][a] == Some(player) {
-                        return true;
-                    }
-                }
-            }
-        }
-        false
-    }
-    pub fn get_available_squares(&self, player: Stone) -> [[bool ; SIZE]; SIZE] {
-        let mut available_squares = [[false; SIZE]; SIZE];
-        for i in 0..SIZE {
-            for j in 0..SIZE {
-                if self.is_available_square(player, i, j) {
-                    available_squares[j][i] = true;
-                }
-            }
-        }
-        available_squares
-    }
-    pub fn put(&mut self, stone: Stone, x: usize, y: usize) -> Result<(), String> {
-        check_coord(x, y)?;
-        let mut reverse_stones = vec![];
-        for &(dx, dy) in &D {
-            let mut tmp_reverse_stones = vec![];
-            if let Ok((mut a, mut b)) = add_coord_and_direction(x, y, dx, dy) {
-                if self.0[b][a] != Some(stone.reverse()) {
-                    continue;
-                }
-                tmp_reverse_stones.push((a, b));
-                while let Ok((next_a, next_b)) = add_coord_and_direction(a, b, dx, dy) {
-                    a = next_a;
-                    b = next_b;
-                    if self.0[b][a].is_none() {
-                        break;
-                    }
-                    if self.0[b][a] == Some(stone) {
-                        reverse_stones.append(&mut tmp_reverse_stones);
-                        break;
-                    }
-                    tmp_reverse_stones.push((a, b));
-                }
-            }
-        }
-        if reverse_stones.is_empty() {
-            Err(format!("Stone {:?} can't put stone. ({}, {})", stone, x, y))
+    pub fn get_legal_moves(&self) -> Positions {
+        let ret = if self.turn == Stone::Black {
+            legal_move(self.black, self.white)
         } else {
-            self.0[y][x] = Some(stone);
-            for (x, y) in reverse_stones {
-                if let Some(stone) = &mut self.0[y][x] {
-                    *stone = stone.reverse();
-                } else {
-                    unreachable!()
-                }
-            }
-            Ok(())
+            legal_move(self.white, self.black)
+        };
+        Positions(ret)
+    }
+    pub fn finished(&self) -> bool {
+        self.get_legal_moves().0 == 0
+    }
+    pub fn put(&mut self, pos: Position) -> Result<(), &str> {
+        if pos.0 & self.get_legal_moves().0 != 0 {
+            return Err("illegal position");
         }
+        if self.finished() {
+            return Err("the game is already over");
+        }
+        if self.turn == Stone::Black {
+            let (black, white) = put(self.black, self.white, pos.0);
+            self.black = black;
+            self.white = white;
+            self.turn = if legal_move(self.white, self.black) == 0 {
+                Stone::Black
+            } else {
+                Stone::Whilte
+            };
+        } else {
+            let (white, black) = put(self.white, self.black, pos.0);
+            self.black = black;
+            self.white = white;
+            self.turn = if legal_move(self.black, self.white) == 0 {
+                Stone::Whilte
+            } else {
+                Stone::Black
+            };
+        }
+        Ok(())
     }
     pub fn count_stone(&self) -> StoneCount {
-        let mut counter = StoneCount::default();
-        for i in 0..SIZE {
-            for j in 0..SIZE {
-                match self.0[i][j] {
-                    Some(Stone::Black) => counter.black += 1,
-                    Some(Stone::Whilte) => counter.white += 1,
-                    None => {}
-                }
+        StoneCount {
+            black: self.black.count_ones() as usize,
+            white: self.white.count_ones() as usize,
+        }
+    }
+    pub fn create_board_array(&self) -> BoardArray {
+        let mut board_array = [[None; SIZE]; SIZE];
+        for i in 0..SIZE * SIZE {
+            let pos = UPPER_LEFT >> i;
+            if self.black & pos != 0 {
+                board_array[i / SIZE][i % SIZE] = Some(Stone::Black);
+            } else if self.white & pos != 0 {
+                board_array[i / SIZE][i % SIZE] = Some(Stone::Whilte);
             }
         }
-        counter
+        board_array
     }
 }
 
