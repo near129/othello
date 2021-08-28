@@ -7,3 +7,4 @@ version = "0.1.0"
 
 [dependencies]
 rand = {version = "*", features = ["small_rng"]}
+tract-onnx = "0.15.2"
