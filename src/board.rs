@@ -25,7 +25,7 @@ pub struct StoneCount {
 pub struct Position(pub u64);
 impl Position {
     pub fn new(x: usize, y: usize) -> Self {
-        Position(UPPER_LEFT >> (x * SIZE + y))
+        Position(UPPER_LEFT >> (y * SIZE + x))
     }
 }
 impl From<Position> for (usize, usize) {
@@ -43,6 +43,16 @@ pub struct Positions(pub u64);
 impl Positions {
     pub fn count(&self) -> usize {
         self.0.count_ones() as usize
+    }
+    pub fn to_map(&self) -> [[bool; SIZE]; SIZE] {
+        let mut m = [[false; SIZE]; SIZE];
+        for i in 0..SIZE * SIZE {
+            let pos = UPPER_LEFT >> i;
+            if self.0 & pos != 0 {
+                m[i / SIZE][i % SIZE] = true;
+            }
+        }
+        m
     }
 }
 impl From<Positions> for Vec<(usize, usize)> {
@@ -79,7 +89,7 @@ impl fmt::Display for Board {
             let stone = match (self.black & pos != 0, self.white & pos != 0) {
                 (true, false) => BLACK_STONE_STRING,
                 (false, true) => WHITE_STONE_STRING,
-                (false, false) => "　",
+                (false, false) => "・",
                 _ => unreachable!(),
             };
             s.push_str(stone);
@@ -128,7 +138,7 @@ impl Board {
         self.get_legal_moves().0 == 0
     }
     pub fn put(&mut self, pos: Position) -> Result<(), &str> {
-        if pos.0 & self.get_legal_moves().0 != 0 {
+        if pos.0 & self.get_legal_moves().0 == 0 {
             return Err("illegal position");
         }
         if self.finished() {
