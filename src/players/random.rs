@@ -1,22 +1,28 @@
 use super::Player;
-use crate::{Board, Position, Stone, SIZE, UPPER_LEFT};
+use crate::{Board, Position, SIZE, UPPER_LEFT, players::PlayerError};
+use anyhow::Result;
 use rand::{rngs::SmallRng, Rng, SeedableRng};
 pub struct RandomPlayer {
     thred_rng: SmallRng,
-    pub stone: Stone,
 }
 impl RandomPlayer {
-    pub fn new(stone: Stone) -> Self {
+    pub fn new() -> Self {
         let thred_rng = SmallRng::from_entropy();
-        RandomPlayer { thred_rng, stone }
+        RandomPlayer { thred_rng}
+    }
+}
+
+impl Default for RandomPlayer {
+    fn default() -> Self {
+        Self::new()
     }
 }
 impl Player for RandomPlayer {
-    fn find_move(&mut self, board: &Board) -> Result<Position, &str> {
+    fn find_move(&mut self, board: &Board) -> Result<Position> {
         let legal_moves = board.get_legal_moves();
         let n = legal_moves.count();
         if n == 0 {
-            return Err("Can't put stone");
+            return Err(PlayerError::NotFoundLegalMove.into());
         }
         let mut idx = self.thred_rng.gen_range(0..n);
         for i in 0..SIZE * SIZE {
@@ -29,8 +35,5 @@ impl Player for RandomPlayer {
             }
         }
         unreachable!()
-    }
-    fn stone(&self) -> Stone {
-        self.stone
     }
 }
