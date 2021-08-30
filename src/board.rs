@@ -1,6 +1,8 @@
-use std::fmt;
+use std::fmt::{self, Debug, Display};
 
 use crate::othello_logic::{legal_move, put};
+use anyhow::Result;
+use thiserror::Error;
 
 pub const SIZE: usize = 8;
 pub const UPPER_LEFT: u64 = 0x8000000000000000;
@@ -22,21 +24,43 @@ pub struct StoneCount {
     pub black: usize,
     pub white: usize,
 }
+#[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy, Debug)]
 pub struct Position(pub u64);
 impl Position {
     pub fn new(x: usize, y: usize) -> Self {
         Position(UPPER_LEFT >> (y * SIZE + x))
     }
-}
-impl From<Position> for (usize, usize) {
-    fn from(p: Position) -> Self {
+    pub fn to_idx(&self) -> usize {
         for i in 0..SIZE * SIZE {
             let pos = UPPER_LEFT >> i;
-            if p.0 & pos != 0 {
-                return (i / SIZE, i % SIZE);
+            if self.0 & pos != 0 {
+                return i;
             }
         }
         unreachable!()
+    }
+}
+impl Display for Position {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for i in 0..SIZE * SIZE {
+            let pos = UPPER_LEFT >> i;
+            if self.0 & pos != 0 {
+                return writeln!(f, "({}, {})", i / SIZE, i % SIZE);
+            }
+        }
+        unreachable!()
+    }
+}
+impl From<(usize, usize)> for Position {
+    fn from(xy: (usize, usize)) -> Position {
+        // for i in 0..SIZE * SIZE {
+        //     let pos = UPPER_LEFT >> i;
+        //     if p.0 & pos != 0 {
+        //         return (i / SIZE, i % SIZE);
+        //     }
+        // }
+        // unreachable!()
+        Position(UPPER_LEFT >> (xy.1 * SIZE + xy.0))
     }
 }
 pub struct Positions(pub u64);
@@ -53,6 +77,16 @@ impl Positions {
             }
         }
         m
+    }
+    pub fn to_position_list(&self) -> Vec<Position> {
+        let mut v = vec![];
+        for i in 0..SIZE * SIZE {
+            let pos = UPPER_LEFT >> i;
+            if self.0 & pos != 0 {
+                v.push(Position(pos));
+            }
+        }
+        v
     }
 }
 impl From<Positions> for Vec<(usize, usize)> {
@@ -73,6 +107,13 @@ pub struct Board {
     pub black: u64,
     pub white: u64,
 }
+#[derive(Debug, Error)]
+enum BoardError {
+    #[error("illegal position {0}")]
+    IllegalPositionError(Position),
+    #[error("the game is alredy over")]
+    AlredyGameOverError,
+}
 type BoardArray = [[Option<Stone>; SIZE]; SIZE];
 
 const BLACK_STONE_STRING: &str = "⚪️";
@@ -80,7 +121,7 @@ const WHITE_STONE_STRING: &str = "⚫️";
 
 impl fmt::Display for Board {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut s = "   a b c d e f g h\n".to_string();
+        let mut s = "  a b c d e f g h\n".to_string();
         for i in 0..SIZE * SIZE {
             if i % SIZE == 0 {
                 s.push(char::from_digit((i / SIZE) as u32, 10).unwrap());
@@ -137,12 +178,12 @@ impl Board {
     pub fn finished(&self) -> bool {
         self.get_legal_moves().0 == 0
     }
-    pub fn put(&mut self, pos: Position) -> Result<(), &str> {
+    pub fn put(&mut self, pos: Position) -> Result<()> {
         if pos.0 & self.get_legal_moves().0 == 0 {
-            return Err("illegal position");
+            return Err(BoardError::IllegalPositionError(pos).into());
         }
         if self.finished() {
-            return Err("the game is already over");
+            return Err(BoardError::AlredyGameOverError.into());
         }
         if self.turn == Stone::Black {
             let (black, white) = put(self.black, self.white, pos.0);
