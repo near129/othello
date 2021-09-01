@@ -11,6 +11,8 @@ ndarray = "0.15.3"
 ndarray-npy = "0.8.0"
 anyhow = "*"
 indicatif = "0.16.2"
+tokio = { version = "0.2", features = ["full"] }
+futures = "*"
 [[bin]]
 name = "selfplay"
 path = "selfplay/main.rs"

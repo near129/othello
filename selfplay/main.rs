@@ -1,10 +1,14 @@
-use std::{env, fs::create_dir, iter};
+use std::env;
 
 use anyhow::Result;
-use indicatif::ProgressIterator;
+use futures::future::join_all;
+use indicatif::MultiProgress;
+use indicatif::ProgressBar;
 use ndarray::{Array1, Array3, Axis};
 use ndarray_npy::write_npy;
 use othello::{players::AlphaZeroPlayer, Board, Position, Stone, StoneCount, SIZE, UPPER_LEFT};
+use tokio::spawn;
+use tokio::task::spawn_blocking;
 
 fn create_board_array(board: &Board) -> Array3<u8> {
     let mut board_array = Array3::zeros((2, SIZE, SIZE));
@@ -24,12 +28,11 @@ fn create_board_array(board: &Board) -> Array3<u8> {
     board_array
 }
 
-const N: usize = 500;
 const NUM_SIMULATION: usize = 5000;
-fn main() -> Result<()> {
-    let cwd = env::current_dir()?;
-    let p = env::args().nth(1).expect("must set output path");
-    let output_path = cwd.join(p);
+async fn simulate(
+    n: usize,
+    pb: ProgressBar,
+) -> Result<(Vec<Array3<u8>>, Vec<Array1<f32>>, Vec<i32>)> {
     let mut player = AlphaZeroPlayer::new(
         "/Users/near129/dev/python/othello-alphazero/models/model.onnx",
         NUM_SIMULATION,
@@ -37,16 +40,14 @@ fn main() -> Result<()> {
     let mut states = vec![];
     let mut policy = vec![];
     let mut values = vec![];
-    let mut _win_cnt = 0;
-    println!("Simulation start");
-    for i in (0..N).progress() {
+    for _ in 0..n {
         // println!("{}", i);
-        print!("\r{:3}/{}", i, N);
         let mut board = Board::new();
-        let mut turn = 0;
+        let mut tmp_values = vec![];
         while !board.finished() {
             // println!("{:?}", board.turn);
             // println!("{}", board);
+            tmp_values.push(if board.turn == Stone::Black { 1 } else { -1 });
             states.push(create_board_array(&board));
             let ret = player.mcts.search(board)?;
             let idx = ret
@@ -58,18 +59,48 @@ fn main() -> Result<()> {
             policy.push(Array1::from_shape_vec(SIZE * SIZE, ret)?);
             let pos = Position(UPPER_LEFT >> idx);
             board.put(pos)?;
-            turn += 1;
+            let StoneCount { black, white } = board.count_stone();
+            if black > white {
+                values.append(&mut tmp_values);
+            } else {
+                values.extend(tmp_values.iter().map(|x| -1 * x));
+            }
         }
-        let StoneCount { black, white } = board.count_stone();
-        let _result = if black > white {
-            values.extend(iter::repeat(1).take(turn));
-            _win_cnt += 1;
-            "Win"
-        } else {
-            values.extend(iter::repeat(-1).take(turn));
-            "Lose"
-        };
         player.mcts.clear_cache();
+        pb.inc(1);
+    }
+    pb.finish_and_clear();
+    Ok((states, policy, values))
+}
+#[tokio::main]
+async fn main() -> Result<()> {
+    let cwd = env::current_dir()?;
+    let args: Vec<String> = env::args().collect();
+    let output_path = cwd.join(&args[1]);
+    let num_worker: usize = args[2].parse().unwrap();
+    let num_simulation: usize = args[3].parse().unwrap();
+    let m = MultiProgress::new();
+    let pb = m.add(ProgressBar::new(
+        (num_simulation / num_worker * num_worker) as u64,
+    ));
+    let mut worker = vec![];
+    for _ in 0..num_worker {
+        worker.push(spawn(simulate(num_simulation / num_worker, pb.clone())));
+    }
+    let mp = spawn_blocking(move || m.join().unwrap());
+    let mut result = join_all(worker)
+        .await
+        .into_iter()
+        .collect::<std::result::Result<Result<Vec<_>>, _>>()??;
+    let _ = mp.await;
+    let n: usize = result.iter().map(|x| x.2.len()).sum();
+    let mut states = Vec::with_capacity(n);
+    let mut policy = Vec::with_capacity(n);
+    let mut values = Vec::with_capacity(n);
+    for (s, p, v) in result.iter_mut() {
+        states.append(s);
+        policy.append(p);
+        values.append(v);
     }
     let states = ndarray::stack(
         Axis(0),
@@ -85,6 +116,6 @@ fn main() -> Result<()> {
     write_npy(output_path.join("states.npy"), &states)?;
     write_npy(output_path.join("policy.npy"), &policy)?;
     write_npy(output_path.join("values.npy"), &values)?;
-    println!("{}", values.len());
+    println!("Finished! number of data: {}", values.len());
     Ok(())
 }
