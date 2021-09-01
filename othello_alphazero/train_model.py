@@ -1,3 +1,5 @@
+from pathlib import Path
+import sys
 import numpy as np
 from sklearn.model_selection import train_test_split
 import torch
@@ -101,9 +103,10 @@ class LightingModule(pl.LightningModule):
 
 
 def main():
-    policy = np.load('data/test2/policy.npy')
-    states = np.load('data/test2/states.npy').astype(np.float32)
-    values = np.load('data/test2/values.npy').astype(np.float32)
+    data_path = Path(sys.argv[1])
+    policy = np.load(data_path / 'policy.npy')
+    states = np.load(data_path / 'states.npy').astype(np.float32)
+    values = np.load(data_path / 'values.npy').astype(np.float32)
     print(policy.shape, states.shape, values.shape)
     train_p, val_p, train_s, val_s, train_v, val_v = train_test_split(
         policy, states, values, test_size=0.2, shuffle=True, random_state=42
