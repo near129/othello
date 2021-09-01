@@ -87,7 +87,7 @@ class LightingModule(pl.LightningModule):
     def shared_step(self, batch):
         x, policy, value = batch
         p, v = self.model(x)
-        return self.loss_p(policy, p) + self.loss_v(value, v)
+        return self.loss_p(policy, p) + self.loss_v(value, v.squeeze())
 
     def training_step(self, batch, batch_idx):
         loss = self.shared_step(batch)
@@ -107,26 +107,28 @@ def main():
     policy = np.load(data_path / 'policy.npy')
     states = np.load(data_path / 'states.npy').astype(np.float32)
     values = np.load(data_path / 'values.npy').astype(np.float32)
-    print(policy.shape, states.shape, values.shape)
+    # print(policy.shape, states.shape, values.shape)
     train_p, val_p, train_s, val_s, train_v, val_v = train_test_split(
         policy, states, values, test_size=0.2, shuffle=True, random_state=42
     )
     train_dataset = Dataset(train_s, train_p, train_v)
     val_dataset = Dataset(val_s, val_p, val_v)
-    train_dataloder = DataLoader(train_dataset, batch_size=256, shuffle=True, num_workers=1)
-    val_dataloder = DataLoader(val_dataset, batch_size=256, num_workers=1)
+    train_dataloder = DataLoader(
+        train_dataset, batch_size=256, shuffle=True, num_workers=4
+    )
+    val_dataloder = DataLoader(val_dataset, batch_size=256, num_workers=4)
     module = LightingModule()
     trainer = pl.Trainer(
+        max_epochs=50,
+        log_every_n_steps=10,
         callbacks=[
             ModelCheckpoint(monitor='val_loss'),
             EarlyStopping(monitor='val_loss'),
-        ]
+        ],
     )
     trainer.fit(module, train_dataloder, val_dataloder)
-    model = module.model
-    model.eval()
     dummy_input = torch.randn(1, 2, 8, 8)
-    torch.onnx.export(model, dummy_input, "models/model.onnx")
+    module.to_onnx("models/model.onnx", dummy_input, export_params=True)
 
 
 if __name__ == '__main__':

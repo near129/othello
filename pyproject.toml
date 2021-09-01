@@ -8,11 +8,12 @@ authors = ["near129"]
 python = ">=3.7, <3.10"
 numpy = "^1.21.2"
 torch = "^1.9.0"
-scikit-learn="^0.24.2"
 pytorch-lightning = "^1.4.4"
 plotly = "^5.2.2"
 torchvision = "^0.10.0"
 torch-tb-profiler = "^0.2.1"
+scipy="^1.7.1"
+scikit-learn = "^0.24.2"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"

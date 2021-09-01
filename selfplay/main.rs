@@ -83,6 +83,7 @@ async fn main() -> Result<()> {
     let pb = m.add(ProgressBar::new(
         (num_simulation / num_worker * num_worker) as u64,
     ));
+    pb.println("simulation start");
     let mut worker = vec![];
     for _ in 0..num_worker {
         worker.push(spawn(simulate(num_simulation / num_worker, pb.clone())));
