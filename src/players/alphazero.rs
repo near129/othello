@@ -44,7 +44,7 @@ impl Default for AlphaZeroPlayer {
             .unwrap()
             .into_runnable()
             .unwrap();
-        let mcts = MCTS::new(model, 1.0, 100);
+        let mcts = MCTS::new(model, 1.0, 10000);
         AlphaZeroPlayer { mcts }
     }
 }
@@ -131,24 +131,36 @@ impl MCTS {
         for _ in 0..self.num_simulation {
             let _ = self._search(board)?;
         }
-        let state = (board.black, board.white);
+        let state = if board.turn == Stone::Black {
+            (board.black, board.white) 
+        } else {
+            (board.white, board.black) 
+        };
         let counts: Vec<usize> = (0..SIZE * SIZE)
             .map(|idx| *self.Nsa.get(&(state, Position(UPPER_LEFT >> idx))).unwrap_or(&0))
             .collect();
-        let sum = *counts.iter().max().unwrap() as f32;
+        let sum = counts.iter().sum::<usize>() as f32;
         Ok(counts.iter().map(|x| *x as f32 / sum).collect())
     }
 
     fn _search(&mut self, mut board: Board) -> Result<f32> {
         if board.finished() {
             let StoneCount { black, white } = board.count_stone();
-            return Ok(-match black.cmp(&white) {
+            let mut res = match black.cmp(&white) {
                 std::cmp::Ordering::Equal => 0.,
                 std::cmp::Ordering::Greater => 1.,
                 std::cmp::Ordering::Less => -1.,
-            });
+            };
+            if board.turn == Stone::Black {
+                res *= -1.0;
+            }
+            return Ok(res);
         }
-        let state = (board.black, board.white);
+        let state = if board.turn == Stone::Black {
+            (board.black, board.white) 
+        } else {
+            (board.white, board.black) 
+        };
         Ok(if let Some(p) = self.Ps.get(&state) {
             let best = board
                 .get_legal_moves()
