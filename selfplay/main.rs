@@ -59,12 +59,12 @@ async fn simulate(
             policy.push(Array1::from_shape_vec(SIZE * SIZE, ret)?);
             let pos = Position(UPPER_LEFT >> idx);
             board.put(pos)?;
-            let StoneCount { black, white } = board.count_stone();
-            if black > white {
-                values.append(&mut tmp_values);
-            } else {
-                values.extend(tmp_values.iter().map(|x| -1 * x));
-            }
+        }
+        let StoneCount { black, white } = board.count_stone();
+        if black > white {
+            values.append(&mut tmp_values);
+        } else {
+            values.extend(tmp_values.iter().map(|x| -1 * x));
         }
         player.mcts.clear_cache();
         pb.inc(1);
