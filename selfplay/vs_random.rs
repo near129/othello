@@ -8,7 +8,7 @@ const N: usize = 10;
 const NUM_SIMULATION: usize = 10000;
 fn main() -> Result<()> {
     let mut player1 = AlphaZeroPlayer::new(
-        "/Users/near129/dev/python/othello-alphazero/models/model.onnx",
+        "./models/model.onnx",
         NUM_SIMULATION,
     );
     let mut player2 = RandomPlayer::new();

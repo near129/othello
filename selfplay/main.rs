@@ -34,7 +34,7 @@ async fn simulate(
     pb: ProgressBar,
 ) -> Result<(Vec<Array3<u8>>, Vec<Array1<f32>>, Vec<i32>)> {
     let mut player = AlphaZeroPlayer::new(
-        "/Users/near129/dev/python/othello-alphazero/models/model.onnx",
+        "./models/model.onnx",
         NUM_SIMULATION,
     );
     let mut states = vec![];
