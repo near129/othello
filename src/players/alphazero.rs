@@ -11,9 +11,10 @@ pub struct AlphaZeroPlayer {
     pub mcts: MCTS,
 }
 impl AlphaZeroPlayer {
-    pub fn new(model_path: &str, num_simulation: usize) -> Self {
+    pub fn new(num_simulation: usize) -> Self {
+        let onxx_model = include_bytes!("nn_model/model.onnx");
         let model = tract_onnx::onnx()
-            .model_for_path(model_path)
+            .model_for_read(&mut BufReader::new(&onxx_model[..]))
             .unwrap()
             .with_input_fact(
                 0,
