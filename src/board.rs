@@ -124,7 +124,7 @@ impl fmt::Display for Board {
         let mut s = "  a b c d e f g h\n".to_string();
         for i in 0..SIZE * SIZE {
             if i % SIZE == 0 {
-                s.push(char::from_digit((i / SIZE) as u32, 10).unwrap());
+                s.push(std::char::from_digit((i / SIZE) as u32, 10).unwrap());
             }
             let pos = UPPER_LEFT >> i;
             let stone = match (self.black & pos != 0, self.white & pos != 0) {
