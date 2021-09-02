@@ -10,7 +10,6 @@ use othello::{
 use tokio::spawn;
 use tokio::task::spawn_blocking;
 
-const N: usize = 10;
 const NUM_SIMULATION: usize = 10000;
 async fn battle(idx: usize, pb: ProgressBar) -> Result<usize> {
     let mut player1 = AlphaZeroPlayer::new("./models/model.onnx", NUM_SIMULATION);
@@ -69,6 +68,6 @@ async fn main() -> Result<()> {
         .sum();
     pb.finish_and_clear();
     let _ = mp.await;
-    println!("win lating: {}", result as f32 / N as f32);
+    println!("win lating: {}", result as f32 / num_simulation as f32);
     Ok(())
 }

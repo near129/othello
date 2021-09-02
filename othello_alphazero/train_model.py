@@ -7,6 +7,7 @@ from torch import nn
 from torch.utils.data import DataLoader
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
+import torch.multiprocessing
 
 
 class Model(torch.nn.Module):
@@ -113,13 +114,11 @@ def main():
     )
     train_dataset = Dataset(train_s, train_p, train_v)
     val_dataset = Dataset(val_s, val_p, val_v)
-    train_dataloder = DataLoader(
-        train_dataset, batch_size=256, shuffle=True, num_workers=4
-    )
-    val_dataloder = DataLoader(val_dataset, batch_size=256, num_workers=4)
+    train_dataloder = DataLoader( train_dataset, batch_size=256, shuffle=True)
+    val_dataloder = DataLoader(val_dataset, batch_size=256)
     module = LightingModule()
     trainer = pl.Trainer(
-        max_epochs=50,
+        max_epochs=500,
         log_every_n_steps=10,
         callbacks=[
             ModelCheckpoint(monitor='val_loss'),
