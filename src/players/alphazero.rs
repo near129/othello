@@ -28,6 +28,22 @@ impl AlphaZeroPlayer {
         let mcts = MCTS::new(model, 1.0, num_simulation);
         AlphaZeroPlayer { mcts }
     }
+    pub fn new_from_model_path(model_path: &str, num_simulation: usize) -> Self {
+        let model = tract_onnx::onnx()
+        .model_for_path(model_path)
+        .unwrap()
+        .with_input_fact(
+            0,
+            InferenceFact::dt_shape(f32::datum_type(), tvec!(1, 2, 8, 8)),
+        )
+        .unwrap()
+        .into_optimized()
+        .unwrap()
+        .into_runnable()
+        .unwrap();
+        let mcts = MCTS::new(model, 1.0, num_simulation);
+        AlphaZeroPlayer { mcts }
+    }
 }
 
 impl Default for AlphaZeroPlayer {
@@ -45,7 +61,7 @@ impl Default for AlphaZeroPlayer {
             .unwrap()
             .into_runnable()
             .unwrap();
-        let mcts = MCTS::new(model, 1.0, 10000);
+        let mcts = MCTS::new(model, 1.0, 5000);
         AlphaZeroPlayer { mcts }
     }
 }
