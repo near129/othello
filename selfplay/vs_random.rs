@@ -17,7 +17,7 @@ async fn battle(idx: usize, pb: ProgressBar) -> Result<usize> {
     let player1_stone = if idx % 2 == 0 {
         Stone::Black
     } else {
-        Stone::Whilte
+        Stone::White
     };
     let mut board = Board::new();
     while !board.finished() {
@@ -40,7 +40,7 @@ async fn battle(idx: usize, pb: ProgressBar) -> Result<usize> {
     // };
     pb.inc(1);
     if (player1_stone == Stone::Black && black >= white)
-        || (player1_stone == Stone::Whilte && white >= black)
+        || (player1_stone == Stone::White && white >= black)
     {
         Ok(1)
     } else {
