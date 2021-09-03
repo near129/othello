@@ -142,7 +142,7 @@ body {
   border-color: #000;
 }
 
-.winnercontainer {
+.statecontainer {
   position: absolute;
   width: 100%;
   height: 600px;
@@ -150,36 +150,54 @@ body {
   place-items: center;
 }
 
-.winnercard {
+.statecard {
   width: 200px;
   height: 120px;
   text-align: center;
   border-radius: 10px;
   display: flex;
   flex-direction: column;
-  vertical-align: middle;
+  font-size: 1em;
+  font-weight: bolder;
+  color: #000000;
 
   background: rgba(255, 255, 255, 0.15);
   box-shadow: 0 8px 32px 0 rgba(74, 74, 74, 0.61);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.18);
+
+  display: -webkit-flex;
+  display: flex;
+  -webkit-align-items: center; /* 縦方向中央揃え（Safari用） */
+  align-items: center; /* 縦方向中央揃え */
+  -webkit-justify-content: center; /* 横方向中央揃え（Safari用） */
+  justify-content: center; /* 横方向中央揃え */
 }
 
-.winnercard .result {
+.selectplayer {
+  color: #dcdbdb;
+}
+.player {
+  font-size: 1.3em;
+  text-align: left;
+  cursor: pointer;
+  color: #252525;
+}
+.result {
   font-size: 1.5em;
   font-weight: bolder;
   text-align: center;
   margin: 20px;
-  color: #eeeeee;
+  color: #000000;
   -webkit-text-stroke-width: 0.4px;
   -webkit-text-stroke-color: #000;
 }
 
-.winnercard .again {
+.again {
   font-size: 1em;
   font-weight: 600;
-  color: #cfcfcf;
+  color: #000000;
   cursor: pointer;
 }
 

@@ -1,3 +1,4 @@
+https://near129.github.io/othello-wasm/
 ## About
 
 This template shows how to create a web app using Yew and wasm-pack. 
