@@ -11,9 +11,10 @@ pub struct AlphaZeroPlayer {
     pub mcts: MCTS,
 }
 impl AlphaZeroPlayer {
-    pub fn new(model_path: &str, num_simulation: usize) -> Self {
+    pub fn new(num_simulation: usize) -> Self {
+        let onxx_model = include_bytes!("nn_model/model.onnx");
         let model = tract_onnx::onnx()
-            .model_for_path(model_path)
+            .model_for_read(&mut BufReader::new(&onxx_model[..]))
             .unwrap()
             .with_input_fact(
                 0,
@@ -24,6 +25,22 @@ impl AlphaZeroPlayer {
             .unwrap()
             .into_runnable()
             .unwrap();
+        let mcts = MCTS::new(model, 1.0, num_simulation);
+        AlphaZeroPlayer { mcts }
+    }
+    pub fn new_from_model_path(model_path: &str, num_simulation: usize) -> Self {
+        let model = tract_onnx::onnx()
+        .model_for_path(model_path)
+        .unwrap()
+        .with_input_fact(
+            0,
+            InferenceFact::dt_shape(f32::datum_type(), tvec!(1, 2, 8, 8)),
+        )
+        .unwrap()
+        .into_optimized()
+        .unwrap()
+        .into_runnable()
+        .unwrap();
         let mcts = MCTS::new(model, 1.0, num_simulation);
         AlphaZeroPlayer { mcts }
     }
@@ -44,7 +61,7 @@ impl Default for AlphaZeroPlayer {
             .unwrap()
             .into_runnable()
             .unwrap();
-        let mcts = MCTS::new(model, 1.0, 100);
+        let mcts = MCTS::new(model, 1.0, 5000);
         AlphaZeroPlayer { mcts }
     }
 }
@@ -131,24 +148,36 @@ impl MCTS {
         for _ in 0..self.num_simulation {
             let _ = self._search(board)?;
         }
-        let state = (board.black, board.white);
+        let state = if board.turn == Stone::Black {
+            (board.black, board.white) 
+        } else {
+            (board.white, board.black) 
+        };
         let counts: Vec<usize> = (0..SIZE * SIZE)
             .map(|idx| *self.Nsa.get(&(state, Position(UPPER_LEFT >> idx))).unwrap_or(&0))
             .collect();
-        let sum = *counts.iter().max().unwrap() as f32;
+        let sum = counts.iter().sum::<usize>() as f32;
         Ok(counts.iter().map(|x| *x as f32 / sum).collect())
     }
 
     fn _search(&mut self, mut board: Board) -> Result<f32> {
         if board.finished() {
             let StoneCount { black, white } = board.count_stone();
-            return Ok(-match black.cmp(&white) {
+            let mut res = match black.cmp(&white) {
                 std::cmp::Ordering::Equal => 0.,
                 std::cmp::Ordering::Greater => 1.,
                 std::cmp::Ordering::Less => -1.,
-            });
+            };
+            if board.turn == Stone::Black {
+                res *= -1.0;
+            }
+            return Ok(res);
         }
-        let state = (board.black, board.white);
+        let state = if board.turn == Stone::Black {
+            (board.black, board.white) 
+        } else {
+            (board.white, board.black) 
+        };
         Ok(if let Some(p) = self.Ps.get(&state) {
             let best = board
                 .get_legal_moves()
