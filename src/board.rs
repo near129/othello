@@ -8,13 +8,13 @@ pub const SIZE: usize = 8;
 pub const UPPER_LEFT: u64 = 0x8000000000000000;
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Stone {
-    Whilte,
+    White,
     Black,
 }
 impl Stone {
     pub fn reverse(&self) -> Stone {
         if *self == Stone::Black {
-            Stone::Whilte
+            Stone::White
         } else {
             Stone::Black
         }
@@ -149,7 +149,7 @@ impl From<Board> for BoardArray {
             if board.black & pos != 0 {
                 board_array[i / SIZE][i % SIZE] = Some(Stone::Black);
             } else if board.white & pos != 0 {
-                board_array[i / SIZE][i % SIZE] = Some(Stone::Whilte);
+                board_array[i / SIZE][i % SIZE] = Some(Stone::White);
             }
         }
         board_array
@@ -192,14 +192,14 @@ impl Board {
             self.turn = if legal_move(self.white, self.black) == 0 {
                 Stone::Black
             } else {
-                Stone::Whilte
+                Stone::White
             };
         } else {
             let (white, black) = put(self.white, self.black, pos.0);
             self.black = black;
             self.white = white;
             self.turn = if legal_move(self.black, self.white) == 0 {
-                Stone::Whilte
+                Stone::White
             } else {
                 Stone::Black
             };
@@ -219,7 +219,7 @@ impl Board {
             if self.black & pos != 0 {
                 board_array[i / SIZE][i % SIZE] = Some(Stone::Black);
             } else if self.white & pos != 0 {
-                board_array[i / SIZE][i % SIZE] = Some(Stone::Whilte);
+                board_array[i / SIZE][i % SIZE] = Some(Stone::White);
             }
         }
         board_array
