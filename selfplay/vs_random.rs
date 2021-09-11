@@ -10,7 +10,7 @@ use othello::{
 use tokio::spawn;
 use tokio::task::spawn_blocking;
 
-const NUM_SIMULATION: usize = 10000;
+const NUM_SIMULATION: usize = 1000;
 async fn battle(idx: usize, pb: ProgressBar) -> Result<usize> {
     let mut player1 = AlphaZeroPlayer::new_from_model_path("./models/model.onnx", NUM_SIMULATION);
     let mut player2 = RandomPlayer::new();

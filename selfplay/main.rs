@@ -28,7 +28,7 @@ fn create_board_array(board: &Board) -> Array3<u8> {
     board_array
 }
 
-const NUM_SIMULATION: usize = 5000;
+const NUM_SIMULATION: usize = 1000;
 async fn simulate(
     n: usize,
     pb: ProgressBar,
