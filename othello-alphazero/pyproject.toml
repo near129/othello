@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "othello-alphazero"
+name = "train_model"
 version = "0.1.0"
 description = ""
 authors = ["near129"]
@@ -15,6 +15,7 @@ torch-tb-profiler = "^0.2.1"
 scipy="^1.7.1"
 scikit-learn = "^0.24.2"
 tensorboard = "^2.6.0"
+typer = "^0.4.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"
