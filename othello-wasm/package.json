@@ -1,0 +1,25 @@
+{
+  "name": "othero-wasm",
+  "private": true,
+  "scripts": {
+    "dev": "webpack-dev-server --mode production --open",
+    "build": "webpack --mode production",
+    "build:dev": "webpack --mode development",
+    "test": "wasm-pack test --chrome --firefox --safari --headless",
+    "deploy": "gh-pages -d dist"
+  },
+  "devDependencies": {
+    "@wasm-tool/wasm-pack-plugin": "^1.3.1",
+    "copy-webpack-plugin": "^6.2.0",
+    "css-loader": "^4.3.0",
+    "sass": "^1.26.11",
+    "sass-loader": "^10.0.2",
+    "style-loader": "^1.3.0",
+    "webpack": "^4.44.2",
+    "webpack-cli": "^3.3.12",
+    "webpack-dev-server": "^3.11.0"
+  },
+  "dependencies": {
+    "gh-pages": "^3.2.3"
+  }
+}
