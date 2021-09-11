@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "othello-alphazero"
+name = "train_model"
 version = "0.1.0"
 description = ""
 authors = ["near129"]
