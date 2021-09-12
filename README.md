@@ -7,7 +7,9 @@ Othello written in Rust
 - `othello-alphazero/`
 
 [Yew](https://github.com/yewstack/yew) + ONNX([tract](https://github.com/sonos/tract))
+
 ![demo](othello-wasm/img/othello.gif)
+
 GitHub pages: <https://near129.github.io/othello/>
 
 ## Othello AlphaZero
