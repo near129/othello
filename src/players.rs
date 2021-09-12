@@ -5,7 +5,7 @@ use thiserror::Error;
 #[derive(Debug, Error)]
 enum PlayerError {
     #[error("not found legal move")]
-    NotFoundLegalMove
+    NotFoundLegalMove,
 }
 pub trait Player {
     fn find_move(&mut self, board: &Board) -> Result<Position>;

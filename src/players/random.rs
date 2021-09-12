@@ -1,5 +1,5 @@
 use super::Player;
-use crate::{Board, Position, SIZE, UPPER_LEFT, players::PlayerError};
+use crate::{players::PlayerError, Board, Position, SIZE, UPPER_LEFT};
 use anyhow::Result;
 use rand::{rngs::SmallRng, Rng, SeedableRng};
 pub struct RandomPlayer {
@@ -8,7 +8,7 @@ pub struct RandomPlayer {
 impl RandomPlayer {
     pub fn new() -> Self {
         let thred_rng = SmallRng::from_entropy();
-        RandomPlayer { thred_rng}
+        RandomPlayer { thred_rng }
     }
 }
 

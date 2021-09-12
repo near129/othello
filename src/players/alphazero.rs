@@ -5,7 +5,7 @@ use crate::{Board, Position, Positions, Stone, StoneCount, SIZE, UPPER_LEFT};
 use anyhow::Result;
 use tract_onnx::{
     prelude::*,
-    tract_hir::tract_ndarray::{Array1, Array3}
+    tract_hir::tract_ndarray::{Array1, Array3},
 };
 pub struct AlphaZeroPlayer {
     pub mcts: MCTS,
@@ -30,17 +30,17 @@ impl AlphaZeroPlayer {
     }
     pub fn new_from_model_path(model_path: &str, num_simulation: usize) -> Self {
         let model = tract_onnx::onnx()
-        .model_for_path(model_path)
-        .unwrap()
-        .with_input_fact(
-            0,
-            InferenceFact::dt_shape(f32::datum_type(), tvec!(1, 2, 8, 8)),
-        )
-        .unwrap()
-        .into_optimized()
-        .unwrap()
-        .into_runnable()
-        .unwrap();
+            .model_for_path(model_path)
+            .unwrap()
+            .with_input_fact(
+                0,
+                InferenceFact::dt_shape(f32::datum_type(), tvec!(1, 2, 8, 8)),
+            )
+            .unwrap()
+            .into_optimized()
+            .unwrap()
+            .into_runnable()
+            .unwrap();
         let mcts = MCTS::new(model, 1.0, num_simulation);
         AlphaZeroPlayer { mcts }
     }
@@ -139,22 +139,27 @@ impl MCTS {
         }
     }
     pub fn clear_cache(&mut self) {
-        self.Qsa= HashMap::new();
-        self.Nsa= HashMap::new();
-        self.Ns =HashMap::new();
-        self.Ps =HashMap::new();
+        self.Qsa = HashMap::new();
+        self.Nsa = HashMap::new();
+        self.Ns = HashMap::new();
+        self.Ps = HashMap::new();
     }
     pub fn search(&mut self, board: Board) -> Result<Vec<f32>> {
         for _ in 0..self.num_simulation {
             let _ = self._search(board)?;
         }
         let state = if board.turn == Stone::Black {
-            (board.black, board.white) 
+            (board.black, board.white)
         } else {
-            (board.white, board.black) 
+            (board.white, board.black)
         };
         let counts: Vec<usize> = (0..SIZE * SIZE)
-            .map(|idx| *self.Nsa.get(&(state, Position(UPPER_LEFT >> idx))).unwrap_or(&0))
+            .map(|idx| {
+                *self
+                    .Nsa
+                    .get(&(state, Position(UPPER_LEFT >> idx)))
+                    .unwrap_or(&0)
+            })
             .collect();
         let sum = counts.iter().sum::<usize>() as f32;
         Ok(counts.iter().map(|x| *x as f32 / sum).collect())
@@ -174,9 +179,9 @@ impl MCTS {
             return Ok(res);
         }
         let state = if board.turn == Stone::Black {
-            (board.black, board.white) 
+            (board.black, board.white)
         } else {
-            (board.white, board.black) 
+            (board.white, board.black)
         };
         Ok(if let Some(p) = self.Ps.get(&state) {
             let best = board

@@ -31,8 +31,6 @@ pub enum Msg {
     Restart,
 }
 
-// TODO: 各stateに対してviewする
-// TODO: 先手か後手か選択できるようにする
 impl Component for App {
     type Message = Msg;
     type Properties = ();
@@ -184,20 +182,17 @@ impl Component for App {
             })
             .collect::<Vec<Html>>();
         let state = html! {
-                match self.state {
+            match self.state {
                 State::GameOver => {
                     html! {
                         <div class="statecontainer">
                             <div class="statecard">
                                 <span class="result">
                                     {
-                                        if black == white {
-                                            "Drow"
-                                        }else if self.player_stone == Stone::Black && black > white {
-                                            "Win"
-                                        } else {
-                                            "Lose"
-                                        }
+                                        if black == white { "Drow" } else if (
+                                            self.player_stone == Stone::Black && black > white)
+                                            || (self.player_stone == Stone::White && black < white)
+                                            { "Win" } else { "Lose" }
                                     }
                                 </span>
                                 <span class="again" onclick=self.link.callback(|_| Msg::Restart)>{ "Play again" }</span>

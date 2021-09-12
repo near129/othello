@@ -1,6 +1,5 @@
 use std::ops::{Shl, Shr};
 
-
 pub fn legal_move(player: u64, opponent: u64) -> u64 {
     let masks = [
         (1, 0x7e7e7e7e7e7e7e7e), // 左右
@@ -27,8 +26,10 @@ pub fn legal_move(player: u64, opponent: u64) -> u64 {
 }
 pub fn reverse(player: u64, opponent: u64, position: u64) -> u64 {
     let masks: [(i32, u64); 4] = [
-        (1, 0xfefefefefefefefe), (7, 0x7f7f7f7f7f7f7f00),
-        (8, 0xffffffffffffff00), (9, 0xfefefefefefefe00),
+        (1, 0xfefefefefefefefe),
+        (7, 0x7f7f7f7f7f7f7f00),
+        (8, 0xffffffffffffff00),
+        (9, 0xfefefefefefefe00),
     ];
     let shifts = [Shl::shl, Shr::shr];
     let mut rev = 0;
@@ -52,7 +53,7 @@ pub fn reverse(player: u64, opponent: u64, position: u64) -> u64 {
     rev
 }
 
-pub fn put (player: u64, opponent: u64, position: u64) -> (u64, u64) {
+pub fn put(player: u64, opponent: u64, position: u64) -> (u64, u64) {
     let rev = reverse(player, opponent, position);
     let player = player ^ (position | rev);
     let opponent = opponent ^ rev;

@@ -33,10 +33,7 @@ async fn simulate(
     n: usize,
     pb: ProgressBar,
 ) -> Result<(Vec<Array3<u8>>, Vec<Array1<f32>>, Vec<i32>)> {
-    let mut player = AlphaZeroPlayer::new_from_model_path(
-        "./models/model.onnx",
-        NUM_SIMULATION,
-    );
+    let mut player = AlphaZeroPlayer::new_from_model_path("./models/model.onnx", NUM_SIMULATION);
     let mut states = vec![];
     let mut policy = vec![];
     let mut values = vec![];
