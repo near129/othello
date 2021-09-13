@@ -1,15 +1,2 @@
-[package]
-edition = "2018"
-name = "othello"
-version = "0.1.0"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [workspace]
-members = ["othello-alphazero", "othello-wasm"]
-
-[dependencies]
-rand = {version = "*", features = ["small_rng"]}
-tract-onnx = "0.15.2"
-anyhow = "*"
-thiserror = "*"
+members = ["othello", "othello-alphazero", "othello-wasm"]

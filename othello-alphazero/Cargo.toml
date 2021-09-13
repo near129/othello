@@ -11,7 +11,8 @@ futures = "*"
 indicatif = "0.16.2"
 ndarray = "0.15.3"
 ndarray-npy = "0.8.0"
-othello = {git = "https://github.com/near129/othello.git", branch = "feature/alphazero"}
+# othello = {git = "https://github.com/near129/othello.git", branch = "feature/alphazero"}
+othello = {path="../othello"}
 tokio = {version = "0.2", features = ["full"]}
 [[bin]]
 name = "selfplay"
