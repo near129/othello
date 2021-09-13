@@ -11,6 +11,7 @@ import torch
 import torch.multiprocessing
 import typer
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
+from pytorch_lightning.loggers import TensorBoardLogger
 from sklearn.model_selection import train_test_split
 from torch import nn
 from torch.utils.data import DataLoader
@@ -151,24 +152,27 @@ def main(
         train_dataloder = DataLoader(train_dataset, batch_size=256, shuffle=True)
         val_dataloder = DataLoader(val_dataset, batch_size=256)
         trainer = pl.Trainer(
+            min_epochs=10,
             max_epochs=300,
             log_every_n_steps=10,
+            logger=[TensorBoardLogger(save_dir='lightning_logs', version='')],
             callbacks=[
-                ModelCheckpoint(monitor='val_loss'),
+                ModelCheckpoint(dirpath='models', filename='latest', monitor='val_loss'),
                 EarlyStopping(monitor='val_loss'),
             ],
         )
         trainer.fit(module, train_dataloder, val_dataloder)
-        subprocess.run(
-            [
-                'cargo',
-                'run',
-                '--release',
-                '--bin',
-                'vs_random',
-                '50',
-            ]
-        ).check_returncode()
+        if i % 10 == 9:
+            subprocess.run(
+                [
+                    'cargo',
+                    'run',
+                    '--release',
+                    '--bin',
+                    'vs_random',
+                    '20',
+                ]
+            ).check_returncode()
     dummy_input = torch.randn(1, 2, 8, 8)
     module.to_onnx(onnx_model_path, dummy_input, export_params=True)
 
