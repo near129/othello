@@ -118,6 +118,7 @@ def main(
     data_path: Path = Path('data'),
     num_simulation: int = 500,
     num_iter: int = 12,
+    num_worker = os.cpu_count()
 ):
     module = (
         LightingModule()
