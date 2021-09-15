@@ -232,7 +232,7 @@ impl MCTS {
             let mask = legal_move_to_array(board.get_legal_moves());
             policy *= &mask;
             // legal_move_mask(board.get_legal_moves(), policy);
-            if policy.sum() >= 0.0 {
+            if policy.sum() <= 0.0 {
                 policy += &mask;
             }
             policy /= policy.sum();

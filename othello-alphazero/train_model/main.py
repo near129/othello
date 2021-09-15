@@ -124,6 +124,7 @@ def main(
         if model_path is None
         else LightingModule.load_from_checkpoint(model_path)
     )
+    module
     for i in range(num_iter):
         print(f'**********{i}************')
         if data_path.exists():
@@ -153,15 +154,15 @@ def main(
         val_dataloder = DataLoader(val_dataset, batch_size=256)
         trainer = pl.Trainer(
             min_epochs=10,
-            max_epochs=300,
+            max_epochs=100,
             log_every_n_steps=10,
-            logger=[TensorBoardLogger(save_dir='lightning_logs', version='')],
+            logger=[],
             callbacks=[
-                ModelCheckpoint(dirpath='models', filename='latest', monitor='val_loss'),
                 EarlyStopping(monitor='val_loss'),
             ],
         )
         trainer.fit(module, train_dataloder, val_dataloder)
+        trainer.save_checkpoint(model_path)
         if i % 10 == 9:
             subprocess.run(
                 [

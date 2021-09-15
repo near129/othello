@@ -1,5 +1,9 @@
 use std::env;
 
+use rand::SeedableRng;
+use rand::seq::SliceRandom;
+use rand::rngs::SmallRng;
+
 use anyhow::Result;
 use futures::future::join_all;
 use indicatif::MultiProgress;
@@ -28,11 +32,12 @@ fn create_board_array(board: &Board) -> Array3<u8> {
     board_array
 }
 
-const NUM_SIMULATION: usize = 1000;
+const NUM_SIMULATION: usize = 100;
 async fn simulate(
     n: usize,
     pb: ProgressBar,
 ) -> Result<(Vec<Array3<u8>>, Vec<Array1<f32>>, Vec<i32>)> {
+    let mut rng = SmallRng::from_entropy();
     let mut player = AlphaZeroPlayer::new_from_model_path("./models/model.onnx", NUM_SIMULATION);
     let mut states = vec![];
     let mut policy = vec![];
@@ -47,12 +52,13 @@ async fn simulate(
             tmp_values.push(if board.turn == Stone::Black { 1 } else { -1 });
             states.push(create_board_array(&board));
             let ret = player.mcts.search(board)?;
-            let idx = ret
-                .iter()
-                .enumerate()
-                .max_by(|a, b| a.1.partial_cmp(b.1).unwrap())
-                .unwrap()
-                .0;
+            let &idx = (0..SIZE*SIZE).collect::<Vec<_>>().choose_weighted(&mut rng, |&idx| ret[idx])?;
+            // let idx = ret
+            //     .iter()
+            //     .enumerate()
+            //     .max_by(|a, b| a.1.partial_cmp(b.1).unwrap())
+            //     .unwrap()
+            //     .0;
             policy.push(Array1::from_shape_vec(SIZE * SIZE, ret)?);
             let pos = Position(UPPER_LEFT >> idx);
             board.put(pos)?;
