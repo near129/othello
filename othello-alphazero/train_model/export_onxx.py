@@ -1,7 +1,7 @@
 from sys import argv
 
 import torch
-from train_model import LightingModule
+from main import LightingModule
 
 def main():
     lightningmodule = LightingModule.load_from_checkpoint(argv[1])

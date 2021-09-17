@@ -8,6 +8,7 @@ from typing import Optional
 import numpy as np
 import pytorch_lightning as pl
 import torch
+import torch.utils.data
 import torch.multiprocessing
 import typer
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
@@ -59,7 +60,7 @@ class Model(torch.nn.Module):
 
         self.fc3 = nn.Linear(256, 64)
         self.fc4 = nn.Linear(256, 1)
-        self.softmax = nn.LogSoftmax(dim=1)
+        self.softmax = nn.Softmax(dim=1)
         self.tanh = nn.Tanh()
 
     def forward(self, x):
@@ -71,7 +72,7 @@ class Model(torch.nn.Module):
         return self.softmax(policy), self.tanh(value)
 
 
-class Dataset:
+class Dataset(torch.utils.data.Dataset):
     def __init__(self, states, policy, values) -> None:
         self.states = states
         self.policy = policy
@@ -87,6 +88,7 @@ class Dataset:
 class LightingModule(pl.LightningModule):
     def __init__(self) -> None:
         super().__init__()
+        # self.save_hyperparameters()
         self.model = Model()
         self.loss_p = nn.BCEWithLogitsLoss()
         self.loss_v = nn.MSELoss()
@@ -109,23 +111,29 @@ class LightingModule(pl.LightningModule):
         self.log('val_loss', loss)
 
     def configure_optimizers(self):
-        return torch.optim.SGD(self.parameters(), lr=0.01)
+        return torch.optim.Adam(self.parameters(), lr=0.01)
 
 
 def main(
-    model_path: Optional[Path] = None,
+    model_path: Optional[Path] = Path('models/latest.ckpt'),
     onnx_model_path: Path = Path('models/model.onnx'),
     data_path: Path = Path('data'),
     num_simulation: int = 500,
-    num_iter: int = 12,
+    num_iter: int = 100,
     num_worker = os.cpu_count()
 ):
+    subprocess.run(
+        [
+            'cargo',
+            'build',
+            '--release',
+        ]
+    ).check_returncode()
     module = (
         LightingModule()
         if model_path is None
         else LightingModule.load_from_checkpoint(model_path)
     )
-    module
     for i in range(num_iter):
         print(f'**********{i}************')
         if data_path.exists():
@@ -133,11 +141,12 @@ def main(
             os.mkdir(data_path)
         subprocess.run(
             [
-                'cargo',
-                'run',
-                '--release',
-                '--bin',
-                'selfplay',
+                '../target/release/selfplay',
+                # 'cargo',
+                # 'run',
+                # '--release',
+                # '--bin',
+                # 'selfplay',
                 'data',
                 '5',
                 str(num_simulation),
@@ -161,22 +170,24 @@ def main(
             callbacks=[
                 EarlyStopping(monitor='val_loss'),
             ],
+            checkpoint_callback=False,
         )
         trainer.fit(module, train_dataloder, val_dataloder)
         trainer.save_checkpoint(model_path)
         if i % 10 == 9:
             subprocess.run(
                 [
-                    'cargo',
-                    'run',
-                    '--release',
-                    '--bin',
-                    'vs_random',
+                    '../target/release/vs_random',
+                    # 'cargo',
+                    # 'run',
+                    # '--release',
+                    # '--bin',
+                    # 'vs_random',
                     '20',
                 ]
             ).check_returncode()
-    dummy_input = torch.randn(1, 2, 8, 8)
-    module.to_onnx(onnx_model_path, dummy_input, export_params=True)
+        dummy_input = torch.randn(1, 2, 8, 8)
+        module.to_onnx(onnx_model_path, dummy_input, export_params=True)
 
 
 if __name__ == '__main__':

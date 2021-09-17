@@ -17,6 +17,7 @@ scikit-learn = "^0.24.2"
 tensorboard = "^2.6.0"
 typer = "^0.4.0"
 mypy = "^0.910"
+onnx = "^1.10.1"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"
