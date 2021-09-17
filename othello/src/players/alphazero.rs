@@ -1,8 +1,9 @@
-use std::{collections::HashMap, io::BufReader};
+use std::io::BufReader;
 
 use super::Player;
 use crate::{Board, Position, Positions, Stone, StoneCount, SIZE, UPPER_LEFT};
 use anyhow::Result;
+use fxhash::FxHashMap;
 use tract_onnx::{
     prelude::*,
     tract_hir::tract_ndarray::{Array1, Array3},
@@ -112,8 +113,8 @@ fn legal_move_to_array(postions: Positions) -> Array1<f32> {
 type Model = SimplePlan<TypedFact, Box<dyn TypedOp>, Graph<TypedFact, Box<dyn TypedOp>>>;
 type State = (u64, u64);
 type SA = (State, Position);
-type SAHashMap<T> = HashMap<SA, T>;
-type SHashMap<T> = HashMap<State, T>;
+type SAHashMap<T> = FxHashMap<SA, T>;
+type SHashMap<T> = FxHashMap<State, T>;
 type Policy = Array1<f32>;
 #[allow(clippy::upper_case_acronyms)]
 #[allow(non_snake_case)]
@@ -132,17 +133,17 @@ impl MCTS {
             model,
             cpuct,
             num_simulation,
-            Qsa: HashMap::new(),
-            Nsa: HashMap::new(),
-            Ns: HashMap::new(),
-            Ps: HashMap::new(),
+            Qsa: FxHashMap ::default(),
+            Nsa: FxHashMap::default(),
+            Ns: FxHashMap::default(),
+            Ps: FxHashMap::default(),
         }
     }
     pub fn clear_cache(&mut self) {
-        self.Qsa = HashMap::new();
-        self.Nsa = HashMap::new();
-        self.Ns = HashMap::new();
-        self.Ps = HashMap::new();
+        self.Qsa = FxHashMap::default();
+        self.Nsa = FxHashMap::default();
+        self.Ns = FxHashMap::default();
+        self.Ps = FxHashMap::default();
     }
     pub fn search(&mut self, board: Board) -> Result<Vec<f32>> {
         for _ in 0..self.num_simulation {
@@ -184,6 +185,9 @@ impl MCTS {
             (board.white, board.black)
         };
         Ok(if let Some(p) = self.Ps.get(&state) {
+            // if p.iter().any(|x| x.is_nan()) {
+            //     println!("{}", &p);
+            // }
             let best = board
                 .get_legal_moves()
                 .to_position_list()
@@ -235,6 +239,9 @@ impl MCTS {
             if policy.sum() <= 0.0 {
                 policy += &mask;
             }
+            // if policy.iter().any(|x| x.is_nan()) {
+            //     println!("{}", &policy);
+            // }
             policy /= policy.sum();
             self.Ps.insert(state, policy);
             self.Ns.insert(state, 0);

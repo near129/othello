@@ -15,9 +15,13 @@ rand = {version = "0.8.4", features = ["small_rng"]}
 # othello = {git = "https://github.com/near129/othello.git", branch = "feature/alphazero"}
 othello = {path = "../othello"}
 tokio = {version = "0.2", features = ["full"]}
+
 [[bin]]
 name = "selfplay"
 path = "selfplay/main.rs"
 [[bin]]
 name = "vs_random"
 path = "selfplay/vs_random.rs"
+
+[build-dependencies]
+fxhash = "0.2.1"

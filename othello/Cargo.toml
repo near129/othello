@@ -10,3 +10,4 @@ rand = {version = "*", features = ["small_rng"]}
 tract-onnx = "0.15.2"
 anyhow = "*"
 thiserror = "*"
+fxhash = "0.2.1"

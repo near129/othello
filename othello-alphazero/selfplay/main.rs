@@ -1,8 +1,8 @@
 use std::env;
 
-use rand::SeedableRng;
-use rand::seq::SliceRandom;
 use rand::rngs::SmallRng;
+use rand::seq::SliceRandom;
+use rand::SeedableRng;
 
 use anyhow::Result;
 use futures::future::join_all;
@@ -46,22 +46,29 @@ async fn simulate(
         // println!("{}", i);
         let mut board = Board::new();
         let mut tmp_values = vec![];
+        let mut i = 0;
         while !board.finished() {
             // println!("{:?}", board.turn);
             // println!("{}", board);
             tmp_values.push(if board.turn == Stone::Black { 1 } else { -1 });
             states.push(create_board_array(&board));
             let ret = player.mcts.search(board)?;
-            let &idx = (0..SIZE*SIZE).collect::<Vec<_>>().choose_weighted(&mut rng, |&idx| ret[idx])?;
-            // let idx = ret
-            //     .iter()
-            //     .enumerate()
-            //     .max_by(|a, b| a.1.partial_cmp(b.1).unwrap())
-            //     .unwrap()
-            //     .0;
+            let idx = if i <= 30 {
+                *(0..SIZE * SIZE)
+                    .collect::<Vec<_>>()
+                    .choose_weighted(&mut rng, |&idx| ret[idx])?
+            } else {
+                ret.iter()
+                    // .map(|&x| if x != 0.0 && rng.gen_bool(0.5) { x + f32::MIN } else { x })
+                    .enumerate()
+                    .max_by(|a, b| a.1.partial_cmp(&b.1).unwrap())
+                    .unwrap()
+                    .0
+            };
             policy.push(Array1::from_shape_vec(SIZE * SIZE, ret)?);
             let pos = Position(UPPER_LEFT >> idx);
             board.put(pos)?;
+            i += 1;
         }
         let StoneCount { black, white } = board.count_stone();
         if black > white {
