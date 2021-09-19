@@ -1,9 +1,11 @@
-use std::io::BufReader;
+use std::{cmp::Ordering, io::BufReader};
 
 use super::Player;
 use crate::{Board, Position, Positions, Stone, StoneCount, SIZE, UPPER_LEFT};
 use anyhow::Result;
 use fxhash::FxHashMap;
+use rand::prelude::*;
+use rand_distr::Dirichlet;
 use tract_onnx::{
     prelude::*,
     tract_hir::tract_ndarray::{Array1, Array3},
@@ -120,6 +122,9 @@ type Policy = Array1<f32>;
 #[allow(non_snake_case)]
 pub struct MCTS {
     model: Model,
+    rng: SmallRng,
+    alpha: f32,
+    eps: f32,
     cpuct: f32,
     num_simulation: usize,
     Qsa: SAHashMap<f32>,
@@ -131,9 +136,12 @@ impl MCTS {
     pub fn new(model: Model, cpuct: f32, num_simulation: usize) -> Self {
         MCTS {
             model,
+            rng: SmallRng::from_entropy(),
+            alpha: 0.35,
+            eps: 0.25,
             cpuct,
             num_simulation,
-            Qsa: FxHashMap ::default(),
+            Qsa: FxHashMap::default(),
             Nsa: FxHashMap::default(),
             Ns: FxHashMap::default(),
             Ps: FxHashMap::default(),
@@ -146,6 +154,30 @@ impl MCTS {
         self.Ps = FxHashMap::default();
     }
     pub fn search(&mut self, board: Board) -> Result<Vec<f32>> {
+        let _ = self._search(board)?;
+        let state = if board.turn == Stone::Black {
+            (board.black, board.white)
+        } else {
+            (board.white, board.black)
+        };
+        let eps = self.eps; // TODO selfの借用が回避できない
+        let alpha = self.alpha; // TODO selfの借用が回避できない
+        if let Some(p) = self.Ps.get_mut(&state) {
+            *p = p.mapv(|x| (1.0 - eps) * x)
+                + Array1::from_vec(
+                    Dirichlet::new(
+                        &board
+                            .get_legal_moves()
+                            .to_map()
+                            .iter()
+                            .flatten()
+                            .map(|b| (*b as u8) as f32 * alpha + f32::EPSILON)
+                            .collect::<Vec<f32>>(),
+                    )?
+                    .sample(&mut self.rng),
+                )
+                .mapv(|x| x * eps);
+        }
         for _ in 0..self.num_simulation {
             let _ = self._search(board)?;
         }
@@ -184,6 +216,13 @@ impl MCTS {
         } else {
             (board.white, board.black)
         };
+        // let random_ordering = || {
+        //     if self.rng.gen_bool(0.5) {
+        //         Ordering::Greater
+        //     } else {
+        //         Ordering::Less
+        //     }
+        // };
         Ok(if let Some(p) = self.Ps.get(&state) {
             // if p.iter().any(|x| x.is_nan()) {
             //     println!("{}", &p);
@@ -210,7 +249,11 @@ impl MCTS {
                         )
                     }
                 })
-                .max_by(|a, b| a.0.partial_cmp(&b.0).unwrap())
+                .max_by(|a, b| {
+                    a.1.partial_cmp(&b.1).unwrap()
+                    // TODO 借用の問題がある
+                    // .then_with(random_ordering)
+                })
                 .unwrap();
             board.put(best.1)?;
             let v = self._search(board)?;

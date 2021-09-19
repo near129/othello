@@ -68,6 +68,6 @@ async fn main() -> Result<()> {
         .sum();
     pb.finish_and_clear();
     let _ = mp.await;
-    println!("win lating: {}", result as f32 / num_simulation as f32);
+    println!("{}", result as f32 / num_simulation as f32);
     Ok(())
 }

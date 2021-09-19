@@ -1,7 +1,9 @@
+use std::cmp::Ordering;
 use std::env;
 
 use rand::rngs::SmallRng;
 use rand::seq::SliceRandom;
+use rand::Rng;
 use rand::SeedableRng;
 
 use anyhow::Result;
@@ -59,9 +61,16 @@ async fn simulate(
                     .choose_weighted(&mut rng, |&idx| ret[idx])?
             } else {
                 ret.iter()
-                    // .map(|&x| if x != 0.0 && rng.gen_bool(0.5) { x + f32::MIN } else { x })
                     .enumerate()
-                    .max_by(|a, b| a.1.partial_cmp(&b.1).unwrap())
+                    .max_by(|a, b| {
+                        a.1.partial_cmp(b.1).unwrap().then_with(|| {
+                            if rng.gen_bool(0.5) {
+                                Ordering::Greater
+                            } else {
+                                Ordering::Less
+                            }
+                        })
+                    })
                     .unwrap()
                     .0
             };

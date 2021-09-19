@@ -3,19 +3,20 @@ import shutil
 import subprocess
 import warnings
 from pathlib import Path
-from typing import Optional
 
 import numpy as np
 import pytorch_lightning as pl
+import timm
 import torch
-import torch.utils.data
 import torch.multiprocessing
+import torch.utils.data
 import typer
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 from pytorch_lightning.loggers import TensorBoardLogger
 from sklearn.model_selection import train_test_split
 from torch import nn
 from torch.utils.data import DataLoader
+import matplotlib.pyplot as plt
 
 warnings.simplefilter('ignore')
 
@@ -72,6 +73,32 @@ class Model(torch.nn.Module):
         return self.softmax(policy), self.tanh(value)
 
 
+class EfficientNet(torch.nn.Module):
+    def __init__(self, backbone='efficientnet_em', features=256, dropout=0.3):
+        super().__init__()
+        self.features = features
+        self.dropout = dropout
+        self.backbone = timm.create_model(
+            backbone, num_classes=self.features, in_chans=2
+        )
+
+        self.bn = nn.BatchNorm1d(self.features)
+        self.relu = nn.ReLU()
+        self.dropout = nn.Dropout(self.dropout, inplace=True)
+
+        self.fc3 = nn.Linear(256, 64)
+        self.fc4 = nn.Linear(256, 1)
+        self.softmax = nn.Softmax(dim=1)
+        self.tanh = nn.Tanh()
+
+    def forward(self, x):
+        x = self.backbone(x)
+        x = self.dropout(self.relu(self.bn(x)))
+        policy = self.fc3(x)
+        value = self.fc4(x)
+        return self.softmax(policy), self.tanh(value)
+
+
 class Dataset(torch.utils.data.Dataset):
     def __init__(self, states, policy, values) -> None:
         self.states = states
@@ -90,6 +117,7 @@ class LightingModule(pl.LightningModule):
         super().__init__()
         # self.save_hyperparameters()
         self.model = Model()
+        # self.model = EfficientNet()
         self.loss_p = nn.BCEWithLogitsLoss()
         self.loss_v = nn.MSELoss()
 
@@ -115,12 +143,13 @@ class LightingModule(pl.LightningModule):
 
 
 def main(
-    model_path: Optional[Path] = Path('models/latest.ckpt'),
+    initial_training=True,
+    model_path: Path = Path('models/latest.ckpt'),
     onnx_model_path: Path = Path('models/model.onnx'),
     data_path: Path = Path('data'),
     num_simulation: int = 500,
     num_iter: int = 100,
-    num_worker = os.cpu_count()
+    num_worker=os.cpu_count(),
 ):
     subprocess.run(
         [
@@ -131,9 +160,10 @@ def main(
     ).check_returncode()
     module = (
         LightingModule()
-        if model_path is None
+        if initial_training
         else LightingModule.load_from_checkpoint(model_path)
     )
+    result = []
     for i in range(num_iter):
         print(f'**********{i}************')
         if data_path.exists():
@@ -148,7 +178,7 @@ def main(
                 # '--bin',
                 # 'selfplay',
                 'data',
-                '5',
+                str(num_worker),
                 str(num_simulation),
             ]
         ).check_returncode()
@@ -160,11 +190,11 @@ def main(
         )
         train_dataset = Dataset(train_s, train_p, train_v)
         val_dataset = Dataset(val_s, val_p, val_v)
-        train_dataloder = DataLoader(train_dataset, batch_size=256, shuffle=True)
-        val_dataloder = DataLoader(val_dataset, batch_size=256)
+        train_dataloder = DataLoader(train_dataset, batch_size=256, shuffle=True, drop_last=True)
+        val_dataloder = DataLoader(val_dataset, batch_size=256, drop_last=True)
         trainer = pl.Trainer(
-            min_epochs=10,
-            max_epochs=100,
+            min_epochs=7,
+            max_epochs=20,
             log_every_n_steps=10,
             logger=[],
             callbacks=[
@@ -174,18 +204,18 @@ def main(
         )
         trainer.fit(module, train_dataloder, val_dataloder)
         trainer.save_checkpoint(model_path)
-        if i % 10 == 9:
-            subprocess.run(
+        if i % 3 == 2:
+            res = subprocess.run(
                 [
                     '../target/release/vs_random',
-                    # 'cargo',
-                    # 'run',
-                    # '--release',
-                    # '--bin',
-                    # 'vs_random',
-                    '20',
-                ]
-            ).check_returncode()
+                    '50',
+                ],
+                capture_output=True
+            )
+            res.check_returncode()
+            result.append(float(res.stdout.decode()))
+            plt.plot(result)
+            plt.savefig(model_path.parent / 'result.png')
         dummy_input = torch.randn(1, 2, 8, 8)
         module.to_onnx(onnx_model_path, dummy_input, export_params=True)
 
