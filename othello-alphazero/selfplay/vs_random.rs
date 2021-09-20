@@ -8,11 +8,14 @@ use othello::{Board, Stone, StoneCount, players::{AlphaZeroPlayer, GreedyPlayer,
 use tokio::spawn;
 use tokio::task::spawn_blocking;
 
-const NUM_SIMULATION: usize = 1000;
+#[allow(dead_code)]
+const NUM_SIMULATION: usize = 125;
 async fn battle(idx: usize, pb: ProgressBar) -> Result<usize> {
-    let mut player1 = AlphaZeroPlayer::new_from_model_path("./models/model.onnx", NUM_SIMULATION);
-    // let mut player1 = AlphaZeroPlayer::default();
+    // let mut player1 = AlphaZeroPlayer::new_from_model_path("/Users/near129/dev/rust/othello/othello-alphazero/train_model/othellonet.onnx", NUM_SIMULATION);
+    let mut player1 = AlphaZeroPlayer::new_from_model_path("models/model.onnx", NUM_SIMULATION);
+    // let mut player1 = MCTSPlayer::new(1.4, 5000);
     let mut player2 = GreedyPlayer::default();
+    // let mut player2 = RandomPlayer::default();
     let player1_stone = if idx % 2 == 0 {
         Stone::Black
     } else {

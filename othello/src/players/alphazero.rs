@@ -1,12 +1,18 @@
 use std::io::BufReader;
 
 use super::Player;
-use crate::{Board, Position, Positions, SIZE, Stone, UPPER_LEFT, utils::{create_board_tensor, game_result}};
+use crate::{
+    utils::{create_board_tensor, game_result},
+    Board, Position, Positions, Stone, SIZE, UPPER_LEFT,
+};
 use anyhow::Result;
 use fxhash::FxHashMap;
 use rand::prelude::*;
 use rand_distr::Dirichlet;
-use tract_onnx::{prelude::*, tract_hir::tract_ndarray::Array1};
+use tract_onnx::{
+    prelude::*,
+    tract_hir::tract_ndarray::{s, Array1},
+};
 pub struct AlphaZeroPlayer {
     pub mcts: MCTS,
 }
@@ -18,7 +24,7 @@ impl AlphaZeroPlayer {
             .unwrap()
             .with_input_fact(
                 0,
-                InferenceFact::dt_shape(f32::datum_type(), tvec!(1, 2, 8, 8)),
+                InferenceFact::dt_shape(f32::datum_type(), tvec!(1, 8, 8)),
             )
             .unwrap()
             .into_optimized()
@@ -34,7 +40,7 @@ impl AlphaZeroPlayer {
             .unwrap()
             .with_input_fact(
                 0,
-                InferenceFact::dt_shape(f32::datum_type(), tvec!(1, 2, 8, 8)),
+                InferenceFact::dt_shape(f32::datum_type(), tvec!(1, 8, 8)),
             )
             .unwrap()
             .into_optimized()
@@ -92,6 +98,13 @@ fn legal_move_to_array(postions: Positions) -> Array1<f32> {
     }
     arr
 }
+fn get_state(board: &Board) -> (u64, u64) {
+    if board.turn == Stone::Black {
+        (board.black, board.white)
+    } else {
+        (board.white, board.black)
+    }
+}
 type Model = SimplePlan<TypedFact, Box<dyn TypedOp>, Graph<TypedFact, Box<dyn TypedOp>>>;
 type State = (u64, u64);
 type SA = (State, Position);
@@ -135,11 +148,7 @@ impl MCTS {
     }
     pub fn search(&mut self, board: Board) -> Result<Vec<f32>> {
         let _ = self._search(board)?;
-        let state = if board.turn == Stone::Black {
-            (board.black, board.white)
-        } else {
-            (board.white, board.black)
-        };
+        let state = get_state(&board);
         let eps = self.eps; // TODO selfの借用が回避できない
         let alpha = self.alpha; // TODO selfの借用が回避できない
         if let Some(p) = self.Ps.get_mut(&state) {
@@ -175,46 +184,29 @@ impl MCTS {
 
     fn _search(&mut self, mut board: Board) -> Result<f32> {
         let player = board.turn;
-        let state = if board.turn == Stone::Black {
-            (board.black, board.white)
-        } else {
-            (board.white, board.black)
-        };
-        // let random_ordering = || {
-        //     if self.rng.gen_bool(0.5) {
-        //         Ordering::Greater
-        //     } else {
-        //         Ordering::Less
-        //     }
-        // };
+        let state = get_state(&board);
         Ok(if let Some(p) = self.Ps.get(&state) {
-            // if p.iter().any(|x| x.is_nan()) {
-            //     println!("{}", &p);
-            // }
             let best = board
                 .get_legal_moves()
                 .to_position_list()
                 .iter()
                 .map(|&a| {
-                    if let Some(q) = self.Qsa.get(&(state, a)) {
-                        (
+                    (
+                        if let Some(q) = self.Qsa.get(&(state, a)) {
                             q + self.cpuct
                                 * p[a.to_idx()]
                                 * (*self.Ns.get(&state).unwrap() as f32).sqrt()
-                                / (1. + *self.Nsa.get(&(state, a)).unwrap() as f32),
-                            a,
-                        )
-                    } else {
-                        (
+                                / (1. + *self.Nsa.get(&(state, a)).unwrap() as f32)
+                        } else {
                             self.cpuct
                                 * p[a.to_idx()]
-                                * (*self.Ns.get(&state).unwrap() as f32).sqrt(),
-                            a,
-                        )
-                    }
+                                * (*self.Ns.get(&state).unwrap() as f32).sqrt()
+                        },
+                        a,
+                    )
                 })
                 .max_by(|a, b| {
-                    a.1.partial_cmp(&b.1).unwrap()
+                    a.0.partial_cmp(&b.0).unwrap()
                     // TODO 借用の問題がある
                     // .then_with(random_ordering)
                 })
@@ -239,11 +231,11 @@ impl MCTS {
             *self.Ns.get_mut(&state).unwrap() += 1;
             v
         } else {
-            let input = create_board_tensor(&board).into_shape(&[1, 2, SIZE, SIZE])?;
+            let input = create_board_tensor(&board).into_shape(&[1, SIZE, SIZE])?;
             let output = self.model.run(tvec![input])?;
             let mut policy = output[0]
                 .to_array_view::<f32>()?
-                .to_shape(SIZE * SIZE)?
+                .slice(s![0, ..-1])
                 .into_owned();
             let v = *output[1].to_scalar::<f32>().unwrap();
             let mask = legal_move_to_array(board.get_legal_moves());

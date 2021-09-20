@@ -15,7 +15,7 @@ impl GreedyPlayer {
 
 impl Default for GreedyPlayer {
     fn default() -> Self {
-        Self::new(0.7)
+        Self::new(0.8)
     }
 }
 impl Player for GreedyPlayer {

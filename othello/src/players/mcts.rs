@@ -1,5 +1,5 @@
 use super::Player;
-use crate::{Board, Position, SIZE, Stone, UPPER_LEFT, utils::game_result};
+use crate::{utils::game_result, Board, Position, Stone, SIZE, UPPER_LEFT};
 use anyhow::Result;
 use fxhash::FxHashMap;
 
@@ -24,7 +24,7 @@ impl MCTSPlayer {
         MCTSPlayer {
             cpuct,
             num_simulation,
-            N: 0,
+            N: 1,
             Qsa: FxHashMap::default(),
             Nsa: FxHashMap::default(),
             Ns: FxHashMap::default(),
@@ -74,16 +74,14 @@ impl MCTSPlayer {
             .to_position_list()
             .iter()
             .map(|&a| {
-                let n = *self.Ns.entry(state).or_insert(0) as f32;
+                let n = *self.Ns.entry(state).or_insert(1) as f32;
                 (
                     *self.Qsa.entry((state, a)).or_insert(1) as f32 / n
                         + self.cpuct * ((self.N as f32).ln() / n).sqrt(),
                     a,
                 )
             })
-            .max_by(|a, b| {
-                a.1.partial_cmp(&b.1).unwrap()
-            })
+            .max_by(|a, b| a.0.partial_cmp(&b.0).unwrap())
             .unwrap();
         board.put(best.1)?;
         let v = if board.finished() {
@@ -118,6 +116,6 @@ impl Player for MCTSPlayer {
 }
 impl Default for MCTSPlayer {
     fn default() -> Self {
-        MCTSPlayer::new(2f32.sqrt(), 50000)
+        MCTSPlayer::new(2f32.sqrt(), 10000)
     }
 }
