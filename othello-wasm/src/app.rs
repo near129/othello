@@ -38,7 +38,7 @@ impl Component for App {
     fn create(_: Self::Properties, link: ComponentLink<Self>) -> Self {
         App {
             board: Board::default(),
-            ai: AlphaZeroPlayer::new(1000),
+            ai: AlphaZeroPlayer::new(300),
             link,
             state: State::GameSetting,
             player_stone: Stone::Black,
