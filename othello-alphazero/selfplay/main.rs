@@ -1,6 +1,7 @@
 use std::cmp::Ordering;
 use std::env;
 
+use othello::Stone;
 use rand::rngs::SmallRng;
 use rand::seq::SliceRandom;
 use rand::Rng;
@@ -12,7 +13,7 @@ use indicatif::MultiProgress;
 use indicatif::ProgressBar;
 use ndarray::{Array1, Array3, Axis};
 use ndarray_npy::write_npy;
-use othello::{players::AlphaZeroPlayer, Board, Position, Stone, StoneCount, SIZE, UPPER_LEFT};
+use othello::{players::AlphaZeroPlayer, Board, Position, StoneCount, SIZE, UPPER_LEFT};
 use tokio::spawn;
 use tokio::task::spawn_blocking;
 
@@ -80,11 +81,12 @@ async fn simulate(
             i += 1;
         }
         let StoneCount { black, white } = board.count_stone();
-        if black > white {
-            values.append(&mut tmp_values);
-        } else {
-            values.extend(tmp_values.iter().map(|x| -1 * x));
-        }
+        let res = match black.cmp(&white) {
+            Ordering::Equal => 0,
+            Ordering::Greater => 1,
+            Ordering::Less => -1,
+        };
+        values.extend(tmp_values.iter().map(|x| x * res));
         player.mcts.clear_cache();
         pb.inc(1);
     }

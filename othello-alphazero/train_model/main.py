@@ -185,6 +185,14 @@ def main(
         policy = np.load(data_path / 'policy.npy')
         states = np.load(data_path / 'states.npy').astype(np.float32)
         values = np.load(data_path / 'values.npy').astype(np.float32)
+        # policy = [np.rot90(policy.reshape(-1, 8, 8), i, (1, 2)).reshape(-1, 64) for i in range(4)]
+        # states = [np.rot90(states, i, (2, 3)) for i in range(4)]
+        # values = [values for _ in range(4)] * 2
+        # policy += [np.fliplr(p) for p in policy]
+        # states += [np.fliplr(s) for s in states]
+        # policy = np.concatenate(policy)
+        # states = np.concatenate(states)
+        # values = np.concatenate(values)
         train_p, val_p, train_s, val_s, train_v, val_v = train_test_split(
             policy, states, values, test_size=0.2, shuffle=True, random_state=42
         )

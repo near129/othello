@@ -1,15 +1,12 @@
-use std::{cmp::Ordering, io::BufReader};
+use std::io::BufReader;
 
 use super::Player;
-use crate::{Board, Position, Positions, Stone, StoneCount, SIZE, UPPER_LEFT};
+use crate::{Board, Position, Positions, SIZE, Stone, UPPER_LEFT, utils::{create_board_tensor, game_result}};
 use anyhow::Result;
 use fxhash::FxHashMap;
 use rand::prelude::*;
 use rand_distr::Dirichlet;
-use tract_onnx::{
-    prelude::*,
-    tract_hir::tract_ndarray::{Array1, Array3},
-};
+use tract_onnx::{prelude::*, tract_hir::tract_ndarray::Array1};
 pub struct AlphaZeroPlayer {
     pub mcts: MCTS,
 }
@@ -85,23 +82,6 @@ impl Player for AlphaZeroPlayer {
     }
 }
 
-fn create_board_tensor(board: &Board) -> Tensor {
-    let mut board_array = Array3::zeros((2, SIZE, SIZE));
-    let (black_idx, white_idx) = if board.turn == Stone::Black {
-        (0, 1)
-    } else {
-        (1, 0)
-    };
-    for i in 0..SIZE * SIZE {
-        let pos = UPPER_LEFT >> i;
-        if board.black & pos != 0 {
-            board_array[[black_idx, i / SIZE, i % SIZE]] = 1f32;
-        } else if board.white & pos != 0 {
-            board_array[[white_idx, i / SIZE, i % SIZE]] = 1f32;
-        }
-    }
-    board_array.into_tensor()
-}
 fn legal_move_to_array(postions: Positions) -> Array1<f32> {
     let mut arr = Array1::zeros(SIZE * SIZE);
     for i in 0..SIZE * SIZE {
@@ -181,11 +161,6 @@ impl MCTS {
         for _ in 0..self.num_simulation {
             let _ = self._search(board)?;
         }
-        let state = if board.turn == Stone::Black {
-            (board.black, board.white)
-        } else {
-            (board.white, board.black)
-        };
         let counts: Vec<usize> = (0..SIZE * SIZE)
             .map(|idx| {
                 *self
@@ -199,18 +174,7 @@ impl MCTS {
     }
 
     fn _search(&mut self, mut board: Board) -> Result<f32> {
-        if board.finished() {
-            let StoneCount { black, white } = board.count_stone();
-            let mut res = match black.cmp(&white) {
-                std::cmp::Ordering::Equal => 0.,
-                std::cmp::Ordering::Greater => 1.,
-                std::cmp::Ordering::Less => -1.,
-            };
-            if board.turn == Stone::Black {
-                res *= -1.0;
-            }
-            return Ok(res);
-        }
+        let player = board.turn;
         let state = if board.turn == Stone::Black {
             (board.black, board.white)
         } else {
@@ -256,7 +220,13 @@ impl MCTS {
                 })
                 .unwrap();
             board.put(best.1)?;
-            let v = self._search(board)?;
+            let v = if board.finished() {
+                game_result(&board, player) as f32
+            } else if player == board.turn {
+                self._search(board)?
+            } else {
+                -self._search(board)?
+            };
             let sa = &(state, best.1);
             if let Some(q) = self.Qsa.get_mut(sa) {
                 *q = (*self.Nsa.get(sa).unwrap() as f32 + *q + v)
@@ -267,7 +237,7 @@ impl MCTS {
                 self.Nsa.insert(*sa, 1);
             }
             *self.Ns.get_mut(&state).unwrap() += 1;
-            -v
+            v
         } else {
             let input = create_board_tensor(&board).into_shape(&[1, 2, SIZE, SIZE])?;
             let output = self.model.run(tvec![input])?;
@@ -278,17 +248,13 @@ impl MCTS {
             let v = *output[1].to_scalar::<f32>().unwrap();
             let mask = legal_move_to_array(board.get_legal_moves());
             policy *= &mask;
-            // legal_move_mask(board.get_legal_moves(), policy);
             if policy.sum() <= 0.0 {
                 policy += &mask;
             }
-            // if policy.iter().any(|x| x.is_nan()) {
-            //     println!("{}", &policy);
-            // }
             policy /= policy.sum();
             self.Ps.insert(state, policy);
             self.Ns.insert(state, 0);
-            -v
+            v
         })
     }
 }

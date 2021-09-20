@@ -15,3 +15,7 @@ pub mod random;
 pub use random::RandomPlayer;
 pub mod alphazero;
 pub use alphazero::AlphaZeroPlayer;
+pub mod mcts;
+pub use mcts::MCTSPlayer;
+pub mod greedy;
+pub use greedy::GreedyPlayer;
