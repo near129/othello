@@ -9,10 +9,7 @@ use anyhow::Result;
 use fxhash::FxHashMap;
 use rand::prelude::*;
 use rand_distr::Dirichlet;
-use tract_onnx::{
-    prelude::*,
-    tract_hir::tract_ndarray::{s, Array1},
-};
+use tract_onnx::{prelude::*, tract_hir::tract_ndarray::Array1};
 pub struct AlphaZeroPlayer {
     pub mcts: MCTS,
 }
@@ -24,7 +21,7 @@ impl AlphaZeroPlayer {
             .unwrap()
             .with_input_fact(
                 0,
-                InferenceFact::dt_shape(f32::datum_type(), tvec!(1, 8, 8)),
+                InferenceFact::dt_shape(f32::datum_type(), tvec!(1, 2, 8, 8)),
             )
             .unwrap()
             .into_optimized()
@@ -40,7 +37,7 @@ impl AlphaZeroPlayer {
             .unwrap()
             .with_input_fact(
                 0,
-                InferenceFact::dt_shape(f32::datum_type(), tvec!(1, 8, 8)),
+                InferenceFact::dt_shape(f32::datum_type(), tvec!(1, 2, 8, 8)),
             )
             .unwrap()
             .into_optimized()
@@ -231,11 +228,11 @@ impl MCTS {
             *self.Ns.get_mut(&state).unwrap() += 1;
             v
         } else {
-            let input = create_board_tensor(&board).into_shape(&[1, SIZE, SIZE])?;
+            let input = create_board_tensor(&board).into_shape(&[1, 2, SIZE, SIZE])?;
             let output = self.model.run(tvec![input])?;
             let mut policy = output[0]
                 .to_array_view::<f32>()?
-                .slice(s![0, ..-1])
+                .to_shape(SIZE * SIZE)?
                 .into_owned();
             let v = *output[1].to_scalar::<f32>().unwrap();
             let mask = legal_move_to_array(board.get_legal_moves());
