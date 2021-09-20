@@ -8,10 +8,10 @@ use othello::{Board, Stone, StoneCount, players::{AlphaZeroPlayer, GreedyPlayer,
 use tokio::spawn;
 use tokio::task::spawn_blocking;
 
-const NUM_SIMULATION: usize = 1000;
+#[allow(dead_code)]
+const NUM_SIMULATION: usize = 125;
 async fn battle(idx: usize, pb: ProgressBar) -> Result<usize> {
-    let mut player1 = AlphaZeroPlayer::new_from_model_path("./models/model.onnx", NUM_SIMULATION);
-    // let mut player1 = AlphaZeroPlayer::default();
+    let mut player1 = AlphaZeroPlayer::new_from_model_path("models/model.onnx", NUM_SIMULATION);
     let mut player2 = GreedyPlayer::default();
     let player1_stone = if idx % 2 == 0 {
         Stone::Black
@@ -19,10 +19,7 @@ async fn battle(idx: usize, pb: ProgressBar) -> Result<usize> {
         Stone::White
     };
     let mut board = Board::new();
-    // let _ = player2.init_search(50000, board);
     while !board.finished() {
-        // println!("{:?}", board.turn);
-        // println!("{}", board);
         let pos = if board.turn == player1_stone {
             player1.find_move(&board)
         } else {
@@ -48,7 +45,7 @@ async fn main() -> Result<()> {
     let m = MultiProgress::new();
     let pb = m.add(ProgressBar::new(num_simulation as u64));
     let mut worker = vec![];
-    pb.println("alpahzero vs random battle");
+    pb.println("alpahzero vs greedy battle");
     for i in 0..num_simulation {
         worker.push(spawn(battle(i, pb.clone())));
     }

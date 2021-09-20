@@ -23,7 +23,7 @@ pub fn game_result(board: &Board, player: Stone) -> i8 {
         std::cmp::Ordering::Greater => 1,
         std::cmp::Ordering::Less => -1,
     };
-    if player == board.turn {
+    if player == Stone::Black {
         res
     } else {
         -res

@@ -35,7 +35,7 @@ fn create_board_array(board: &Board) -> Array3<u8> {
     board_array
 }
 
-const NUM_SIMULATION: usize = 100;
+const NUM_SIMULATION: usize = 300;
 async fn simulate(
     n: usize,
     pb: ProgressBar,
@@ -46,13 +46,10 @@ async fn simulate(
     let mut policy = vec![];
     let mut values = vec![];
     for _ in 0..n {
-        // println!("{}", i);
         let mut board = Board::new();
         let mut tmp_values = vec![];
         let mut i = 0;
         while !board.finished() {
-            // println!("{:?}", board.turn);
-            // println!("{}", board);
             tmp_values.push(if board.turn == Stone::Black { 1 } else { -1 });
             states.push(create_board_array(&board));
             let ret = player.mcts.search(board)?;
@@ -132,9 +129,7 @@ async fn main() -> Result<()> {
         Axis(0),
         &policy.iter().map(|s| s.view()).collect::<Vec<_>>(),
     )?;
-    // let policy = Array2::from_shape_vec((policy.len(), SIZE * SIZE), policy)?;
     let values = Array1::from_shape_vec(values.len(), values)?;
-    // println!("{}", win_cnt as f32 / N as f32);
     write_npy(output_path.join("states.npy"), &states)?;
     write_npy(output_path.join("policy.npy"), &policy)?;
     write_npy(output_path.join("values.npy"), &values)?;
