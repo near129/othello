@@ -11,8 +11,7 @@ import torch
 import torch.multiprocessing
 import torch.utils.data
 import typer
-from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
-from pytorch_lightning.loggers import TensorBoardLogger
+from pytorch_lightning.callbacks import EarlyStopping
 from sklearn.model_selection import train_test_split
 from torch import nn
 from torch.utils.data import DataLoader
@@ -21,7 +20,7 @@ import matplotlib.pyplot as plt
 warnings.simplefilter('ignore')
 
 
-class Model(torch.nn.Module):
+class SimpleModel(torch.nn.Module):
     def __init__(self):
         super().__init__()
         self.height = self.width = 8
@@ -73,8 +72,8 @@ class Model(torch.nn.Module):
         return self.softmax(policy), self.tanh(value)
 
 
-class EfficientNet(torch.nn.Module):
-    def __init__(self, backbone='efficientnet_em', features=256, dropout=0.3):
+class Model(torch.nn.Module):
+    def __init__(self, backbone='regnetx_002', features=256, dropout=0.3):
         super().__init__()
         self.features = features
         self.dropout = dropout
@@ -113,11 +112,10 @@ class Dataset(torch.utils.data.Dataset):
 
 
 class LightingModule(pl.LightningModule):
-    def __init__(self) -> None:
+    def __init__(self, model='simple') -> None:
         super().__init__()
-        # self.save_hyperparameters()
-        self.model = Model()
-        # self.model = EfficientNet()
+        self.save_hyperparameters()
+        self.model = SimpleModel() if model == 'simple' else Model(model)
         self.loss_p = nn.BCEWithLogitsLoss()
         self.loss_v = nn.MSELoss()
 
@@ -139,7 +137,7 @@ class LightingModule(pl.LightningModule):
         self.log('val_loss', loss)
 
     def configure_optimizers(self):
-        return torch.optim.Adam(self.parameters(), lr=0.01)
+        return torch.optim.Adam(self.parameters(), lr=0.001)
 
 
 def main(
@@ -150,6 +148,9 @@ def main(
     num_simulation: int = 500,
     num_iter: int = 100,
     num_worker=os.cpu_count(),
+    data_augment = True,
+    batch_size=64,
+    model='simple',
 ):
     subprocess.run(
         [
@@ -159,7 +160,7 @@ def main(
         ]
     ).check_returncode()
     module = (
-        LightingModule()
+        LightingModule(model)
         if initial_training
         else LightingModule.load_from_checkpoint(model_path)
     )
@@ -172,11 +173,6 @@ def main(
         subprocess.run(
             [
                 '../target/release/selfplay',
-                # 'cargo',
-                # 'run',
-                # '--release',
-                # '--bin',
-                # 'selfplay',
                 'data',
                 str(num_worker),
                 str(num_simulation),
@@ -185,23 +181,23 @@ def main(
         policy = np.load(data_path / 'policy.npy')
         states = np.load(data_path / 'states.npy').astype(np.float32)
         values = np.load(data_path / 'values.npy').astype(np.float32)
-        # policy = [np.rot90(policy.reshape(-1, 8, 8), i, (1, 2)).reshape(-1, 64) for i in range(4)]
-        # states = [np.rot90(states, i, (2, 3)) for i in range(4)]
-        # values = [values for _ in range(4)] * 2
-        # policy += [np.fliplr(p) for p in policy]
-        # states += [np.fliplr(s) for s in states]
-        # policy = np.concatenate(policy)
-        # states = np.concatenate(states)
-        # values = np.concatenate(values)
+        if data_augment:
+            policy = [np.rot90(policy.reshape(-1, 8, 8), i, (1, 2)).reshape(-1, 64) for i in range(4)]
+            states = [np.rot90(states, i, (2, 3)) for i in range(4)]
+            values = [values for _ in range(4)] * 2
+            policy += [np.fliplr(p) for p in policy]
+            states += [np.fliplr(s) for s in states]
+            policy = np.concatenate(policy)
+            states = np.concatenate(states)
+            values = np.concatenate(values)
         train_p, val_p, train_s, val_s, train_v, val_v = train_test_split(
             policy, states, values, test_size=0.2, shuffle=True, random_state=42
         )
         train_dataset = Dataset(train_s, train_p, train_v)
         val_dataset = Dataset(val_s, val_p, val_v)
-        train_dataloder = DataLoader(train_dataset, batch_size=256, shuffle=True, drop_last=True)
-        val_dataloder = DataLoader(val_dataset, batch_size=256, drop_last=True)
+        train_dataloder = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, drop_last=True)
+        val_dataloder = DataLoader(val_dataset, batch_size=batch_size, drop_last=True)
         trainer = pl.Trainer(
-            min_epochs=7,
             max_epochs=20,
             log_every_n_steps=10,
             logger=[],
@@ -209,6 +205,7 @@ def main(
                 EarlyStopping(monitor='val_loss'),
             ],
             checkpoint_callback=False,
+            gpus=-1 if torch.cuda.is_available() else 0
         )
         trainer.fit(module, train_dataloder, val_dataloder)
         trainer.save_checkpoint(model_path)

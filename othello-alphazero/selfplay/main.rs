@@ -35,13 +35,13 @@ fn create_board_array(board: &Board) -> Array3<u8> {
     board_array
 }
 
-const NUM_SIMULATION: usize = 300;
 async fn simulate(
     n: usize,
     pb: ProgressBar,
+    mcts_simulation: usize
 ) -> Result<(Vec<Array3<u8>>, Vec<Array1<f32>>, Vec<i32>)> {
     let mut rng = SmallRng::from_entropy();
-    let mut player = AlphaZeroPlayer::new_from_model_path("./models/model.onnx", NUM_SIMULATION);
+    let mut player = AlphaZeroPlayer::new_from_model_path("./models/model.onnx", mcts_simulation);
     let mut states = vec![];
     let mut policy = vec![];
     let mut values = vec![];
@@ -95,8 +95,9 @@ async fn main() -> Result<()> {
     let cwd = env::current_dir()?;
     let args: Vec<String> = env::args().collect();
     let output_path = cwd.join(&args[1]);
-    let num_worker: usize = args[2].parse().unwrap();
-    let num_simulation: usize = args[3].parse().unwrap();
+    let num_worker: usize = args[2].parse()?;
+    let num_simulation: usize = args[3].parse()?;
+    let mcts_simulation: usize = args[4].parse()?;
     let m = MultiProgress::new();
     let pb = m.add(ProgressBar::new(
         (num_simulation / num_worker * num_worker) as u64,
@@ -104,7 +105,7 @@ async fn main() -> Result<()> {
     pb.println("simulation start");
     let mut worker = vec![];
     for _ in 0..num_worker {
-        worker.push(spawn(simulate(num_simulation / num_worker, pb.clone())));
+        worker.push(spawn(simulate(num_simulation / num_worker, pb.clone(), mcts_simulation)));
     }
     let mp = spawn_blocking(move || m.join().unwrap());
     let mut result = join_all(worker)
