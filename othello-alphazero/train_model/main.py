@@ -147,10 +147,11 @@ def main(
     data_path: Path = Path('data'),
     num_simulation: int = 500,
     num_iter: int = 100,
-    num_worker=os.cpu_count(),
-    data_augment = True,
+    num_worker: int=os.cpu_count(),
+    data_augment: bool = True,
     batch_size=64,
-    model='simple',
+    model: str ='simple',
+    mcts_simulation: int = 50
 ):
     subprocess.run(
         [
@@ -176,6 +177,7 @@ def main(
                 'data',
                 str(num_worker),
                 str(num_simulation),
+                str(mcts_simulation)
             ]
         ).check_returncode()
         policy = np.load(data_path / 'policy.npy')
@@ -184,9 +186,10 @@ def main(
         if data_augment:
             policy = [np.rot90(policy.reshape(-1, 8, 8), i, (1, 2)).reshape(-1, 64) for i in range(4)]
             states = [np.rot90(states, i, (2, 3)) for i in range(4)]
-            values = [values for _ in range(4)] * 2
-            policy += [np.fliplr(p) for p in policy]
-            states += [np.fliplr(s) for s in states]
+            # values = [values for _ in range(4)] * 2
+            values = [values for _ in range(4)]
+            # policy += [np.fliplr(p) for p in policy]
+            # states += [np.fliplr(s) for s in states]
             policy = np.concatenate(policy)
             states = np.concatenate(states)
             values = np.concatenate(values)
