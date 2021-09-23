@@ -149,7 +149,7 @@ def main(
     num_iter: int = 100,
     num_worker: int=os.cpu_count(),
     data_augment: bool = True,
-    batch_size=64,
+    batch_size: int =64,
     model: str ='simple',
     mcts_simulation: int = 50
 ):
