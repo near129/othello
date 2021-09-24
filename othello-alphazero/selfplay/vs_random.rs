@@ -4,14 +4,16 @@ use anyhow::Result;
 use futures::future::join_all;
 use indicatif::{MultiProgress, ProgressBar};
 #[allow(unused_imports)]
-use othello::{Board, Stone, StoneCount, players::{AlphaZeroPlayer, GreedyPlayer, MCTSPlayer, Player, RandomPlayer}};
+use othello::{
+    players::{AlphaZeroPlayer, GreedyPlayer, MCTSPlayer, Player, RandomPlayer},
+    Board, Stone, StoneCount,
+};
 use tokio::spawn;
 use tokio::task::spawn_blocking;
 
-#[allow(dead_code)]
 const NUM_SIMULATION: usize = 125;
-async fn battle(idx: usize, pb: ProgressBar) -> Result<usize> {
-    let mut player1 = AlphaZeroPlayer::new_from_model_path("models/model.onnx", NUM_SIMULATION);
+async fn battle(idx: usize, model_path: String, pb: ProgressBar) -> Result<usize> {
+    let mut player1 = AlphaZeroPlayer::new_from_model_path(&model_path, NUM_SIMULATION);
     let mut player2 = GreedyPlayer::default();
     let player1_stone = if idx % 2 == 0 {
         Stone::Black
@@ -41,13 +43,14 @@ async fn battle(idx: usize, pb: ProgressBar) -> Result<usize> {
 async fn main() -> Result<()> {
     let args: Vec<String> = env::args().collect();
     let num_simulation: usize = args[1].parse().unwrap();
+    let model_path: String = args[2].to_owned();
 
     let m = MultiProgress::new();
     let pb = m.add(ProgressBar::new(num_simulation as u64));
     let mut worker = vec![];
     pb.println("alpahzero vs greedy battle");
     for i in 0..num_simulation {
-        worker.push(spawn(battle(i, pb.clone())));
+        worker.push(spawn(battle(i, model_path.clone(), pb.clone())));
     }
     let mp = spawn_blocking(move || m.join().unwrap());
     let result: usize = join_all(worker)
