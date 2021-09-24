@@ -141,17 +141,17 @@ class LightingModule(pl.LightningModule):
 
 
 def main(
-    initial_training=True,
+    initial_training: bool = False,
     model_path: Path = Path('models/latest.ckpt'),
     onnx_model_path: Path = Path('models/model.onnx'),
     data_path: Path = Path('data'),
     num_simulation: int = 500,
     num_iter: int = 100,
-    num_worker: int=os.cpu_count(),
+    num_worker: int = os.cpu_count()*3,
     data_augment: bool = True,
-    batch_size: int =64,
-    model: str ='simple',
-    mcts_simulation: int = 50
+    batch_size: int = 64,
+    model: str = 'simple',
+    mcts_simulation: int = 50,
 ):
     subprocess.run(
         [
@@ -177,14 +177,17 @@ def main(
                 'data',
                 str(num_worker),
                 str(num_simulation),
-                str(mcts_simulation)
+                str(mcts_simulation),
             ]
         ).check_returncode()
         policy = np.load(data_path / 'policy.npy')
         states = np.load(data_path / 'states.npy').astype(np.float32)
         values = np.load(data_path / 'values.npy').astype(np.float32)
         if data_augment:
-            policy = [np.rot90(policy.reshape(-1, 8, 8), i, (1, 2)).reshape(-1, 64) for i in range(4)]
+            policy = [
+                np.rot90(policy.reshape(-1, 8, 8), i, (1, 2)).reshape(-1, 64)
+                for i in range(4)
+            ]
             states = [np.rot90(states, i, (2, 3)) for i in range(4)]
             # values = [values for _ in range(4)] * 2
             values = [values for _ in range(4)]
@@ -198,7 +201,9 @@ def main(
         )
         train_dataset = Dataset(train_s, train_p, train_v)
         val_dataset = Dataset(val_s, val_p, val_v)
-        train_dataloder = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, drop_last=True)
+        train_dataloder = DataLoader(
+            train_dataset, batch_size=batch_size, shuffle=True, drop_last=True
+        )
         val_dataloder = DataLoader(val_dataset, batch_size=batch_size, drop_last=True)
         trainer = pl.Trainer(
             max_epochs=20,
@@ -208,17 +213,14 @@ def main(
                 EarlyStopping(monitor='val_loss'),
             ],
             checkpoint_callback=False,
-            gpus=-1 if torch.cuda.is_available() else 0
+            gpus=-1 if torch.cuda.is_available() else 0,
         )
         trainer.fit(module, train_dataloder, val_dataloder)
         trainer.save_checkpoint(model_path)
         if i % 3 == 2:
             res = subprocess.run(
-                [
-                    '../target/release/vs_random',
-                    '50',
-                ],
-                capture_output=True
+                ['../target/release/vs_random', '50', 'models/model.onnx'],
+                capture_output=True,
             )
             res.check_returncode()
             result.append(float(res.stdout.decode()))

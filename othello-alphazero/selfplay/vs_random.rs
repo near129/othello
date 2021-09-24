@@ -11,9 +11,10 @@ use othello::{
 use tokio::spawn;
 use tokio::task::spawn_blocking;
 
-const NUM_SIMULATION: usize = 125;
+const NUM_SIMULATION: usize = 50;
 async fn battle(idx: usize, model_path: String, pb: ProgressBar) -> Result<usize> {
     let mut player1 = AlphaZeroPlayer::new_from_model_path(&model_path, NUM_SIMULATION);
+    // let mut player2 = AlphaZeroPlayer::new(NUM_SIMULATION);
     let mut player2 = GreedyPlayer::default();
     let player1_stone = if idx % 2 == 0 {
         Stone::Black
