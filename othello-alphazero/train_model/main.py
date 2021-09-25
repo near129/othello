@@ -160,11 +160,12 @@ def main(
             '--release',
         ]
     ).check_returncode()
-    module = (
-        LightingModule(model)
-        if initial_training
-        else LightingModule.load_from_checkpoint(model_path)
-    )
+    if initial_training:
+        print('creating new model')
+        module = LightingModule(model)
+    else:
+        print('loading model')
+        module = LightingModule.load_from_checkpoint(model_path)
     result = []
     for i in range(num_iter):
         print(f'**********{i}************')
