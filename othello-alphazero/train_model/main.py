@@ -189,10 +189,10 @@ def main(
                 for i in range(4)
             ]
             states = [np.rot90(states, i, (2, 3)) for i in range(4)]
-            # values = [values for _ in range(4)] * 2
+            values = [values for _ in range(4)] * 2
             values = [values for _ in range(4)]
-            # policy += [np.fliplr(p) for p in policy]
-            # states += [np.fliplr(s) for s in states]
+            policy += [np.fliplr(p) for p in policy]
+            states += [np.fliplr(s) for s in states]
             policy = np.concatenate(policy)
             states = np.concatenate(states)
             values = np.concatenate(values)
