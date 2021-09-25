@@ -41,8 +41,8 @@ async fn simulate(
     mcts_simulation: usize
 ) -> Result<(Vec<Array3<u8>>, Vec<Array1<f32>>, Vec<i32>)> {
     let mut rng = SmallRng::from_entropy();
-    // let mut player = AlphaZeroPlayer::new_from_model_path("./models/model.onnx", mcts_simulation);
-    let mut player = AlphaZeroPlayer::new_from_model_path("/Users/near129/GoggleDrive/tmp/regnet.onnx", mcts_simulation);
+    let mut player = AlphaZeroPlayer::new_from_model_path("./models/model.onnx", mcts_simulation);
+    // let mut player = AlphaZeroPlayer::new_from_model_path("/Users/near129/GoggleDrive/tmp/regnet.onnx", mcts_simulation);
     let mut states = vec![];
     let mut policy = vec![];
     let mut values = vec![];
