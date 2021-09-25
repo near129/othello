@@ -190,7 +190,6 @@ def main(
             ]
             states = [np.rot90(states, i, (2, 3)) for i in range(4)]
             values = [values for _ in range(4)] * 2
-            values = [values for _ in range(4)]
             policy += [np.fliplr(p) for p in policy]
             states += [np.fliplr(s) for s in states]
             policy = np.concatenate(policy)
@@ -219,7 +218,7 @@ def main(
         trainer.save_checkpoint(model_path)
         if i % 3 == 2:
             res = subprocess.run(
-                ['../target/release/vs_random', '50', 'models/model.onnx'],
+                ['../target/release/vs_random', '100', 'models/model.onnx'],
                 capture_output=True,
             )
             res.check_returncode()
