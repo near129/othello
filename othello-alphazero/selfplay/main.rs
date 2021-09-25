@@ -41,7 +41,8 @@ async fn simulate(
     mcts_simulation: usize
 ) -> Result<(Vec<Array3<u8>>, Vec<Array1<f32>>, Vec<i32>)> {
     let mut rng = SmallRng::from_entropy();
-    let mut player = AlphaZeroPlayer::new_from_model_path("./models/model.onnx", mcts_simulation);
+    // let mut player = AlphaZeroPlayer::new_from_model_path("./models/model.onnx", mcts_simulation);
+    let mut player = AlphaZeroPlayer::new_from_model_path("/Users/near129/GoggleDrive/tmp/regnet.onnx", mcts_simulation);
     let mut states = vec![];
     let mut policy = vec![];
     let mut values = vec![];
@@ -87,7 +88,6 @@ async fn simulate(
         player.mcts.clear_cache();
         pb.inc(1);
     }
-    pb.finish_and_clear();
     Ok((states, policy, values))
 }
 #[tokio::main]
@@ -107,11 +107,12 @@ async fn main() -> Result<()> {
     for _ in 0..num_worker {
         worker.push(spawn(simulate(num_simulation / num_worker, pb.clone(), mcts_simulation)));
     }
-    let mp = spawn_blocking(move || m.join().unwrap());
+    let mp = spawn_blocking(move || m.join_and_clear().unwrap());
     let mut result = join_all(worker)
         .await
         .into_iter()
         .collect::<std::result::Result<Result<Vec<_>>, _>>()??;
+    pb.finish();
     let _ = mp.await;
     let n: usize = result.iter().map(|x| x.2.len()).sum();
     let mut states = Vec::with_capacity(n);

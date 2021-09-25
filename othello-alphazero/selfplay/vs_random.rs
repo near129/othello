@@ -53,14 +53,14 @@ async fn main() -> Result<()> {
     for i in 0..num_simulation {
         worker.push(spawn(battle(i, model_path.clone(), pb.clone())));
     }
-    let mp = spawn_blocking(move || m.join().unwrap());
+    let mp = spawn_blocking(move || m.join_and_clear().unwrap());
     let result: usize = join_all(worker)
         .await
         .into_iter()
         .collect::<std::result::Result<Result<Vec<_>>, _>>()??
         .iter()
         .sum();
-    pb.finish_and_clear();
+    pb.finish();
     let _ = mp.await;
     println!("{}", result as f32 / num_simulation as f32);
     Ok(())
