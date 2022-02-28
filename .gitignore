@@ -1,3 +1,4 @@
+outputs
 /target
 Cargo.lock
 .vscode
@@ -149,7 +150,8 @@ cython_debug/
 .LSOverride
 
 # Icon must end with two \r
-Icon
+Icon
+
 
 # Thumbnails
 ._*
